@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["ledger", "payout"]
+members = ["ledger", "payout", "escrow"]
 
 [profile.release]
 codegen-units = 1
