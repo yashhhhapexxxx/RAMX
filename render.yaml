@@ -1,0 +1,60 @@
+# Hosted gateway for judges (testnet only). One instance: SQLite lives on the persistent disk.
+# Secrets are `sync: false`: set them in the Render dashboard, never in git.
+services:
+  - type: web
+    name: ramx-gateway
+    runtime: node
+    plan: starter # a persistent disk needs a paid instance
+    numInstances: 1
+    buildCommand: npm i -g pnpm@11.5.2 && pnpm install --frozen-lockfile --filter @ramx/gateway...
+    startCommand: cd gateway && node src/main.ts
+    healthCheckPath: /healthz
+    disk:
+      name: ramx-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATABASE_PATH
+        value: /var/data/ramx.db
+      - key: NEAR_RPC_URL
+        value: https://rpc.testnet.fastnear.com
+      - key: LEDGER_CONTRACT_ID
+        value: ledger.ramx.testnet
+      - key: PAYOUT_CONTRACT_ID
+        value: payout.ramx.testnet
+      - key: ESCROW_CONTRACT_ID
+        value: escrow.ramx.testnet
+      - key: NEAR_GATEWAY_ACCOUNT_ID
+        value: gateway.ramx.testnet
+      - key: SETTLER_ACCOUNT_ID
+        value: treasury.ramx.testnet
+      - key: X402_RELAYER_ID
+        value: relayer.ramx.testnet
+      - key: X402_PAY_TO
+        value: treasury.ramx.testnet
+      - key: NEARAI_FALLBACK
+        value: "true"
+      - key: PUBLIC_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: POOL_COORDINATOR_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GATEWAY_SIGNING_KEY
+        sync: false
+      - key: NEAR_GATEWAY_KEY
+        sync: false
+      - key: SETTLER_KEY
+        sync: false
+      - key: X402_RELAYER_KEY
+        sync: false
+      - key: NEARAI_API_KEY
+        sync: false
+      - key: TRANSCRIPT_KEY
+        sync: false
