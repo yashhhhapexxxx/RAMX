@@ -1,0 +1,86 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Explorer, verification, epochs, models, provider.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* explorer */
+.table-click tbody tr {
+  cursor: pointer;
+}
+.table-click tbody tr:hover td,
+.table-click tbody tr:focus-visible td {
+  background: #278cff0d;
+}
+.table-click tbody tr:focus-visible {
+  outline: 1px solid var(--blue);
+  outline-offset: -1px;
+}
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 14px;
+  font-size: 13px;
+}
+
+/* suspect matrix */
+
+/* calibration histogram */
+
+/* verdict score bar */
+
+/* epochs */
+
+/* provider */
+
+/* /ledger */
+.ledger-topic {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.ledger-table .pill {
+  font-size: 10px;
+}
+.ledger-detail td {
+  background: #ffffff04;
+}
+.ledger-detail-body {
+  display: grid;
+  gap: 10px;
+  padding: 4px 0 8px;
+}
+.mirror-ok {
+  color: var(--ok, #8ecab3);
+}
+.mirror-bad {
+  color: var(--bad, #ef6b6b);
+}
+/* /payouts */
+.payout-wallet {
+  font-size: 22px;
+}
+.inline-link {
+  display: inline-flex;
+  margin-top: 0;
+  font-size: inherit;
+}
+.row-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font: inherit;
+  border-radius: 4px;
+}
+.row-toggle svg {
+  transform: rotate(-90deg);
+  transition: transform 0.15s;
+}
+.row-toggle[aria-expanded="true"] svg {
+  transform: none;
+}
+.ledger-table tr.is-open td {
+  background: #ffffff06;
+}
