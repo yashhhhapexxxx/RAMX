@@ -1,0 +1,104 @@
+{
+  "leaf": "sha256(account_id \u2016 0x00 \u2016 amount u128 big-endian)",
+  "pair": "sha256(min \u2016 max)",
+  "cases": [
+    {
+      "name": "one",
+      "root": "5db865d68dcdbb499e85b4dea7dbf1aa987bd05b916729077f834c01919231fe",
+      "leaves": [
+        {
+          "account": "alice.testnet",
+          "amount": "1000",
+          "leaf": "5db865d68dcdbb499e85b4dea7dbf1aa987bd05b916729077f834c01919231fe",
+          "proof": []
+        }
+      ]
+    },
+    {
+      "name": "three",
+      "root": "e6be51a7dda8624dcc9221c203ebce242d87fb5979588af2de24c31c8ee9c580",
+      "leaves": [
+        {
+          "account": "alice.testnet",
+          "amount": "1000",
+          "leaf": "5db865d68dcdbb499e85b4dea7dbf1aa987bd05b916729077f834c01919231fe",
+          "proof": [
+            "9cc570fae085c14c6b3ad44bca7ec127f1903747a102a39928b35571efda4384",
+            "c84dadcca92bdc0c97635506115531696138387ff0c1c6be96b10bb44d6ae60d"
+          ]
+        },
+        {
+          "account": "bob.testnet",
+          "amount": "2500",
+          "leaf": "9cc570fae085c14c6b3ad44bca7ec127f1903747a102a39928b35571efda4384",
+          "proof": [
+            "5db865d68dcdbb499e85b4dea7dbf1aa987bd05b916729077f834c01919231fe",
+            "c84dadcca92bdc0c97635506115531696138387ff0c1c6be96b10bb44d6ae60d"
+          ]
+        },
+        {
+          "account": "node-1.ramx.testnet",
+          "amount": "123456",
+          "leaf": "c84dadcca92bdc0c97635506115531696138387ff0c1c6be96b10bb44d6ae60d",
+          "proof": [
+            "2c13aca707affc5e1683a3f0e6d5152b12d18b8388c6881663a45e43c3c10df3"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "five",
+      "root": "0b3074864c4974df17cedaafa870a1539dabb32606c719c414560ed458ea6cf8",
+      "leaves": [
+        {
+          "account": "alice.testnet",
+          "amount": "1",
+          "leaf": "1e3a37d44274108259fbe7fa2bfde69037a067c2150c98175b168f64b18341f7",
+          "proof": [
+            "2c821d168894c4db393b957d88de3186facabbe8e897160cf26cc3e7a79a9b91",
+            "8215eec3c7d2e35203964cf5f965ce32e40cd5a1a32039363a8ff74f31d898ea",
+            "99ea97c1c3da48bf5961f6e629524ceaae14a1c6f789a733d744ba9aa168e797"
+          ]
+        },
+        {
+          "account": "carol.testnet",
+          "amount": "3",
+          "leaf": "2c821d168894c4db393b957d88de3186facabbe8e897160cf26cc3e7a79a9b91",
+          "proof": [
+            "1e3a37d44274108259fbe7fa2bfde69037a067c2150c98175b168f64b18341f7",
+            "8215eec3c7d2e35203964cf5f965ce32e40cd5a1a32039363a8ff74f31d898ea",
+            "99ea97c1c3da48bf5961f6e629524ceaae14a1c6f789a733d744ba9aa168e797"
+          ]
+        },
+        {
+          "account": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af",
+          "amount": "4",
+          "leaf": "695c7bfcc549000a1dda38b32e9de41bac776293eb3c12d3f93312d1796ae513",
+          "proof": [
+            "7ac4f28052565bc58d8a907bb2b3bad5d768dd8043ce9a00cc626a50e10f7f3e",
+            "e55dd60a6509ee3c192fea8f70c7db8bf4bd5d41eeed1caafec0bc9a71d9a7ad",
+            "99ea97c1c3da48bf5961f6e629524ceaae14a1c6f789a733d744ba9aa168e797"
+          ]
+        },
+        {
+          "account": "dave.ramx.testnet",
+          "amount": "340282366920938463463374607431768211455",
+          "leaf": "7ac4f28052565bc58d8a907bb2b3bad5d768dd8043ce9a00cc626a50e10f7f3e",
+          "proof": [
+            "695c7bfcc549000a1dda38b32e9de41bac776293eb3c12d3f93312d1796ae513",
+            "e55dd60a6509ee3c192fea8f70c7db8bf4bd5d41eeed1caafec0bc9a71d9a7ad",
+            "99ea97c1c3da48bf5961f6e629524ceaae14a1c6f789a733d744ba9aa168e797"
+          ]
+        },
+        {
+          "account": "bob.testnet",
+          "amount": "2",
+          "leaf": "99ea97c1c3da48bf5961f6e629524ceaae14a1c6f789a733d744ba9aa168e797",
+          "proof": [
+            "1b01cc668c814965b9b666c45ecee5448b4c7a775465959a176ac7fbcf03a69a"
+          ]
+        }
+      ]
+    }
+  ]
+}
