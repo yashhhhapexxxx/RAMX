@@ -1,0 +1,508 @@
+.crew-scene {
+  position: relative;
+  width: 100%;
+  height: 330px;
+  isolation: isolate;
+}
+.crew-scene-landing {
+  height: 345px;
+}
+.crew-ground {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  bottom: 15%;
+  height: 40%;
+  z-index: -1;
+  background: radial-gradient(ellipse at center, #15315b12, transparent 70%);
+}
+.crew-ground:after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 4px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #789ac41f, transparent);
+}
+.crew-ground > span {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: #a9c8ed42;
+  border-radius: 50%;
+}
+.crew-ground > span:nth-child(1) {
+  left: 10%;
+  top: 20%;
+}
+.crew-ground > span:nth-child(2) {
+  left: 32%;
+  bottom: 10%;
+}
+.crew-ground > span:nth-child(3) {
+  left: 50%;
+  top: 20%;
+}
+.crew-ground > span:nth-child(4) {
+  right: 30%;
+  bottom: 30%;
+}
+.crew-ground > span:nth-child(5) {
+  right: 5%;
+  top: 30%;
+}
+.crew-connections {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.2;
+  transition: opacity 1s;
+  pointer-events: none;
+}
+.crew-connections.connections-active {
+  opacity: 0.8;
+}
+.crew-signal {
+  stroke-dashoffset: 0;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+.connections-active .crew-signal {
+  opacity: 1;
+  animation: send-a-thought 3s linear infinite;
+}
+.crew-member {
+  position: absolute;
+  left: var(--agent-x);
+  top: var(--agent-y);
+  transform: translate(-50%, -50%);
+  transition:
+    left 1.9s cubic-bezier(0.4, 0, 0.2, 1),
+    top 1.9s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+  --sprite-size: 84px;
+}
+.crew-member-quil {
+  --sprite-size: 103px;
+  z-index: 3;
+}
+.crew-person {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 0;
+  width: var(--sprite-size);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  isolation: isolate;
+  outline-offset: 7px !important;
+  border-radius: 25px;
+}
+.crew-person:before {
+  content: "";
+  position: absolute;
+  inset: 0 -10px 30px;
+  background: radial-gradient(ellipse, var(--agent-color), transparent 65%);
+  opacity: 0;
+  z-index: -1;
+  filter: blur(15px);
+  transition: opacity 0.5s;
+}
+.crew-person:hover:before,
+.is-speaking .crew-person:before {
+  opacity: 0.12;
+}
+.crew-scene-landing .crew-person:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.agent-sprite {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 5px 12px #0005);
+}
+.crew-person-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: var(--agent-color);
+  font: 10px var(--display);
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+}
+.crew-person-name > i {
+  height: 3px;
+  width: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.is-speaking .crew-person-name > i {
+  opacity: 0.8;
+}
+.crew-person-role {
+  font-size: 11px;
+  color: #687b96;
+  line-height: 1.8;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+.crew-utterance {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 13px);
+  transform: translateX(-50%);
+  width: 185px;
+  text-align: center;
+  font-size: 13px;
+  color: #bdcde2;
+  line-height: 1.65;
+  animation: thought-in 0.5s ease;
+  pointer-events: none;
+}
+.crew-utterance > i {
+  display: block;
+  width: 1px;
+  height: 15px;
+  background: linear-gradient(#9bbbe34a, transparent);
+  margin: 8px auto 0;
+}
+.crew-member-quil > .crew-utterance {
+  color: #d3e1f4;
+}
+.crew-scene-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  font: 6px var(--display);
+  letter-spacing: 0.65px;
+  color: #61738d;
+}
+.crew-scene-caption > span:last-child {
+  font-size: 10px;
+  color: #50617a;
+}
+.sprite-body {
+  transform-origin: 50px 85px;
+  animation: sprite-breathe 4s ease-in-out infinite;
+  animation-delay: var(--agent-delay, 0s);
+}
+.sprite-shadow {
+  transform-origin: 50px 101px;
+  animation: shadow-breathe 4s ease-in-out infinite;
+  animation-delay: var(--agent-delay, 0s);
+}
+.sprite-eyes {
+  transform-origin: 50px 51px;
+  animation: sprite-blink 6s infinite;
+  animation-delay: var(--agent-delay, 0s);
+}
+.sprite-arm {
+  transform-box: fill-box;
+  transform-origin: top center;
+}
+.mood-talking .sprite-arm.right {
+  animation: sprite-wave 1.3s ease-in-out 3;
+}
+.mood-talking .sprite-mouth {
+  animation: sprite-talk 0.6s ease-in-out infinite;
+  transform-origin: 50px 60px;
+}
+.mood-walking .sprite-foot.left {
+  transform-origin: 37px 85px;
+  animation: sprite-step-left 0.24s ease-in-out 8;
+}
+.mood-walking .sprite-foot.right {
+  transform-origin: 60px 85px;
+  animation: sprite-step-right 0.24s ease-in-out 8;
+}
+.mood-walking .sprite-body {
+  animation: sprite-walk 0.24s ease-in-out 8;
+}
+.mood-happy .sprite-body {
+  animation:
+    sprite-celebrate 0.7s ease-in-out 2,
+    sprite-breathe 4s 1.4s ease-in-out infinite;
+}
+.mood-happy .sprite-arm.right {
+  animation: sprite-wave 1.3s ease-in-out 2;
+}
+.phase-paused .crew-signal {
+  animation-play-state: paused;
+}
+.phase-paused .sprite-body {
+  animation-play-state: paused;
+}
+@keyframes send-a-thought {
+  to {
+    stroke-dashoffset: -108;
+  }
+}
+@keyframes thought-in {
+  from {
+    opacity: 0;
+    translate: 0 5px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes sprite-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.012, 0.99);
+  }
+}
+@keyframes shadow-breathe {
+  0%,
+  100% {
+    opacity: 0.12;
+    transform: scaleX(1);
+  }
+  50% {
+    opacity: 0.08;
+    transform: scaleX(0.9);
+  }
+}
+@keyframes sprite-blink {
+  0%,
+  43%,
+  47%,
+  100% {
+    transform: scaleY(1);
+  }
+  45% {
+    transform: scaleY(0.08);
+  }
+}
+@keyframes sprite-wave {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  35% {
+    transform: rotate(-20deg);
+  }
+  65% {
+    transform: rotate(-9deg);
+  }
+}
+@keyframes sprite-talk {
+  0%,
+  100% {
+    transform: scaleY(0.8);
+  }
+  50% {
+    transform: scaleY(1.25);
+  }
+}
+@keyframes sprite-step-left {
+  0%,
+  100% {
+    rotate: -12deg;
+    translate: 0 -1px;
+  }
+  50% {
+    rotate: 14deg;
+    translate: 0 1px;
+  }
+}
+@keyframes sprite-step-right {
+  0%,
+  100% {
+    rotate: 14deg;
+    translate: 0 1px;
+  }
+  50% {
+    rotate: -12deg;
+    translate: 0 -1px;
+  }
+}
+@keyframes sprite-walk {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(1deg);
+  }
+}
+@keyframes sprite-celebrate {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px) rotate(-2deg);
+  }
+}
+@media (max-width: 800px) {
+  .crew-member {
+    --sprite-size: 72px;
+  }
+  .crew-member-quil {
+    --sprite-size: 89px;
+  }
+  .crew-scene-landing {
+    height: 320px;
+  }
+  .crew-utterance {
+    font-size: 12px;
+    width: 155px;
+  }
+  .crew-person-name {
+    font-size: 11px;
+  }
+  .crew-person-role {
+    font-size: 10px;
+  }
+  .crew-scene-caption {
+    font-size: 10px;
+  }
+}
+@media (max-width: 600px) {
+  .crew-member {
+    --sprite-size: 57px;
+  }
+  .crew-member-quil {
+    --sprite-size: 72px;
+  }
+  .crew-scene-landing {
+    height: 285px;
+  }
+  .crew-person-name {
+    font-size: 10px;
+  }
+  .crew-person-role {
+    font-size: 10px;
+    margin-top: 3px;
+  }
+  .crew-utterance {
+    width: 130px;
+    font-size: 11px;
+    bottom: calc(100% + 7px);
+    line-height: 1.7;
+  }
+  .crew-utterance > i {
+    height: 11px;
+    margin-top: 6px;
+  }
+  .crew-member-pip > .crew-utterance {
+    left: 0;
+    transform: none;
+    text-align: left;
+  }
+  .crew-member-pip > .crew-utterance > i {
+    margin-left: 24px;
+  }
+  .crew-member-wren > .crew-utterance {
+    left: auto;
+    right: 0;
+    transform: none;
+    text-align: right;
+  }
+  .crew-member-wren > .crew-utterance > i {
+    margin-right: 24px;
+  }
+  .crew-scene-caption {
+    font-size: 10px;
+    letter-spacing: 0.3px;
+    gap: 10px;
+  }
+  .crew-scene-caption > span:last-child {
+    font-size: 10px;
+  }
+  .crew-ground {
+    left: 0;
+    right: 0;
+  }
+  .crew-connections {
+    opacity: 0.15;
+  }
+}
+
+/* ── Landing: NEAR / USDC / TEE badges hanging above the crew (dark, no glow) ── */
+.crew-scene-landing { overflow: visible; margin-top: 80px; }
+/* the badges hang in the band above the scene, clear of the agents and their speech */
+.crew-hangers { position: absolute; inset: -78px 0 auto; height: 0; pointer-events: none; }
+.crew-hanger {
+  position: absolute;
+  left: var(--hx);
+  top: 0;
+  width: 0;
+  transform-origin: 50% 0;
+  animation: crew-sway 4.2s ease-in-out infinite;
+  animation-delay: var(--hdelay);
+}
+.crew-hanger-string {
+  display: block;
+  width: 1px;
+  height: var(--hlen);
+  margin: 0;
+  transform: translateX(-0.5px);
+  background: linear-gradient(180deg, transparent, rgba(242, 243, 247, 0.25));
+}
+.crew-hanger-badge {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  height: 40px;
+  padding: 0 12px 0 8px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  border: 1px solid rgba(242, 243, 247, 0.18);
+  background: rgba(10, 11, 14, 0.9);
+  color: #c9ccd3;
+  white-space: nowrap;
+  animation: crew-bob 3.4s ease-in-out infinite;
+  animation-delay: var(--hdelay);
+  transition: border-color 0.4s, background 0.4s;
+}
+.crew-hanger-badge b { font-size: 13px; font-weight: 600; color: #f2f3f7; letter-spacing: 0.02em; }
+/* the real logo, drawn in the badge's ink */
+.crew-hanger-logo {
+  display: block;
+  width: 22px;
+  height: 22px;
+  background: currentColor;
+  -webkit-mask: var(--logo) center / contain no-repeat;
+  mask: var(--logo) center / contain no-repeat;
+}
+.crew-hanger.is-active .crew-hanger-badge {
+  border-color: #278cff;
+  color: #ffffff;
+}
+@keyframes crew-sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+@keyframes crew-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -4px; } }
+@media (max-width: 600px) { .crew-hanger-badge b { display: none; } .crew-hanger-badge { padding: 0 6px; } }
+@media (prefers-reduced-motion: reduce) { .crew-hanger, .crew-hanger-badge { animation: none; } }
+
+/* ── Landing: the gateway (Hedy) in the centre, talking to NEAR / USDC / TEE and the pool ── */
+.crew-scene-landing .crew-connections { overflow: visible; opacity: 0.9; }
+.crew-scene-landing .crew-spokes { stroke: rgba(242, 243, 247, 0.16); stroke-width: 0.8; vector-effect: non-scaling-stroke; }
+.crew-signal-landing { stroke: rgba(242, 243, 247, 0.75); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.crew-scene-landing .connections-active .crew-signal-landing { animation: crew-flow 1.1s linear infinite; }
+@keyframes crew-flow { to { stroke-dashoffset: -30; } }
+.crew-scene-landing .crew-member-iris { z-index: 2; }
+.crew-scene-landing .crew-member-iris .crew-person { transform: scale(1.15); }
+@media (prefers-reduced-motion: reduce) { .crew-scene-landing .connections-active .crew-signal-landing { animation: none; } }
+
