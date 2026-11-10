@@ -10,6 +10,8 @@ import type { Db } from "./db.ts";
  * 1. Routing modes (request header `x-ramx-privacy`):
  *    - `trusted-ends`: the first and last layers run on the requester's own nodes or TRUSTED_ACCOUNTS.
  *    - `trusted-all`:  EVERY layer runs on such nodes, so no untrusted machine sees any data.
+ *    - `tee`:          served by a NEAR AI Cloud model in secure hardware (no laptop sees the prompt);
+ *                      the receipt carries that model's attestation (nearai-upstream.ts). Needs NEARAI_API_KEY.
  *    A privacy request also stores no transcript (only hashes).
  * 2. Salted hashes: prompt_hash / resp_hash = sha256("<salt>:<data>") with a random 16-byte salt per
  *    request. The public ledger ledger cannot be searched for short prompts ("hi", "yes"). The requester
@@ -21,7 +23,7 @@ import type { Db } from "./db.ts";
 
 export const PRIVACY_HEADER = "x-ramx-privacy";
 export const HASH_SALT_HEADER = "x-ramx-hash-salt";
-export const PRIVACY_MODES = ["trusted-ends", "trusted-all"] as const;
+export const PRIVACY_MODES = ["trusted-ends", "trusted-all", "tee"] as const;
 export type PrivacyMode = (typeof PRIVACY_MODES)[number];
 
 export const isPrivacyMode = (v: string): v is PrivacyMode => (PRIVACY_MODES as readonly string[]).includes(v);

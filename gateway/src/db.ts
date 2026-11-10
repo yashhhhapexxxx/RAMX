@@ -7,7 +7,7 @@ import Database from "better-sqlite3";
  * base-unit decimal strings, times are Unix ms. No migrations (dev phase): when SCHEMA_VERSION
  * changes, delete the database file and restart.
  */
-export const SCHEMA_VERSION = 22;
+export const SCHEMA_VERSION = 23;
 
 export const TABLES = [
   "provider_pools", "provider_members", "provider_enrollments",
@@ -39,6 +39,7 @@ export const TABLES = [
   "key_topups",
   "near_nonces",
   "tee_checks",
+  "tee_attestations",
   "swarm_commits", "swarm_reveals", "swarm_rounds", "swarm_slots",
 ] as const;
 
@@ -157,6 +158,7 @@ CREATE TABLE IF NOT EXISTS requests (
   sampling_seed       INTEGER,
   sampling_settings   TEXT,
   max_tokens           INTEGER,                      -- answer cap the gateway picked (budget.ts); learns per user
+  backend              TEXT,                         -- "pool" or "near-ai-cloud" (judge mode); set when the request finishes
   ts                   INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS ledger_events (
@@ -362,6 +364,14 @@ CREATE TABLE IF NOT EXISTS tee_checks (               -- Phase 6.2: sampled answ
   error              TEXT,
   created_at         INTEGER NOT NULL,
   judged_at          INTEGER
+);
+CREATE TABLE IF NOT EXISTS tee_attestations (         -- Phase J: attestation of the NEAR AI model that served a request
+  req_id             TEXT PRIMARY KEY REFERENCES requests(req_id),
+  model              TEXT NOT NULL,
+  nonce              TEXT NOT NULL,
+  signing_address    TEXT NOT NULL,
+  attestation_sha256 TEXT NOT NULL,
+  attested_at        INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS swarm_commits (             -- Phase 7 capacity market (swarm-sim/RULES.md)
   round_id INTEGER NOT NULL, agent TEXT NOT NULL, role TEXT NOT NULL CHECK (role IN ('buyer', 'seller')),

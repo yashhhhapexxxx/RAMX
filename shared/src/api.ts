@@ -193,7 +193,8 @@ export const ModelsResponse = z.object({
       model_factor: z.number().positive(),
       /** Number of ready pools that serve the model now. */
       pools: z.number().int().nonnegative(),
-      source: z.literal("gateway"),
+      /** "gateway" = laptop pools serve it; "near-ai-cloud" = no pool is ready, a NEAR AI Cloud TEE model serves it (judge mode). */
+      source: z.enum(["gateway", "near-ai-cloud"]),
       /** Largest prompt + answer the serving pools take, tokens (minimum over their nodes). */
       context_length: z.number().int().positive().optional(),
       /** Current price; requests lock their own quote. */
@@ -580,6 +581,16 @@ export const RequestAttempt = z.object({
 });
 export type RequestAttempt = z.infer<typeof RequestAttempt>;
 
+/** Phase J: attestation (fresh nonce) of the NEAR AI Cloud TEE model that served the request. */
+export const TeeAttestation = z.object({
+  model: z.string(),
+  nonce: z.string(),
+  signing_address: z.string(),
+  attestation_sha256: z.string(),
+  attested_at: TimestampMs,
+});
+export type TeeAttestation = z.infer<typeof TeeAttestation>;
+
 export const TeeCheck = z.object({
   status: z.enum(["queued", "done", "error"]),
   judge_model: z.string().nullable(),
@@ -621,7 +632,9 @@ export const Receipt = z.object({
   /** P5.8: "scheduler" = the pipeline Parallax really used (hook route log); "heartbeat" = pool layer map. */
   route_source: z.enum(["heartbeat", "scheduler"]).nullable(),
   /** Privacy mode of the request (header x-ramx-privacy); null = normal. Privacy requests store no transcript. */
-  privacy: z.enum(["trusted-ends", "trusted-all"]).nullable(),
+  privacy: z.enum(["trusted-ends", "trusted-all", "tee"]).nullable(),
+  /** "pool" = laptop pool; "near-ai-cloud" = served by a NEAR AI Cloud TEE model (judge mode / privacy "tee"). */
+  backend: z.enum(["pool", "near-ai-cloud"]).nullable().optional(),
   prompt_hash: Hex32,
   resp_hash: Hex32.nullable(),
   /** Sequence number of this request's settle event on the NEAR ledger contract; null until final. */
@@ -634,6 +647,8 @@ export const Receipt = z.object({
   price_multiplier: z.number().positive().nullable().optional(),
   /** Phase 6.2 TEE spot-check of this answer (null = not sampled). A plausibility check, not proof. */
   tee_check: TeeCheck.nullable().optional(),
+  /** Phase J: attestation of the NEAR AI model that served this request (null = served by a pool). */
+  tee_attestation: TeeAttestation.nullable().optional(),
   ts: TimestampMs,
 });
 export type Receipt = z.infer<typeof Receipt>;

@@ -63,6 +63,12 @@ export const GatewayEnv = z.preprocess(
     /** Share of served answers sent to the TEE judge (0–1, default 0.1). Privacy requests are never sampled. */
     TEE_JUDGE_RATE: z.coerce.number().min(0).max(1).optional(),
     TEE_JUDGE_MODEL: opt,
+    /** Judge mode: serve from NEAR AI Cloud when no laptop pool is ready (needs NEARAI_API_KEY). "false" turns it off. */
+    NEARAI_FALLBACK: z.enum(["true", "false"]).default("true"),
+    /** OpenAI-compatible NEAR AI Cloud base URL (tests point it at a local fake). */
+    NEARAI_BASE_URL: z.url().optional(),
+    /** JSON {"<our model id>": "<NEAR AI model>"}; models not listed use TEE_JUDGE_MODEL. */
+    NEARAI_MODEL_MAP: opt,
     /** Capacity market round length in seconds (swarm-sim/RULES.md); default 30. */
     SWARM_ROUND_S: z.coerce.number().int().min(3).max(3600).optional(),
     /** Account that funds and posts epochs (the x402 treasury: X402_PAY_TO), with its ed25519 key. */
