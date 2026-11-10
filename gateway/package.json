@@ -1,0 +1,43 @@
+{
+  "name": "@ramx/gateway",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/main.ts",
+    "dev": "node --watch --env-file-if-exists=.env src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "test:demo": "node --test test/backend-demo.test.ts",
+    "demo:privacy": "node scripts/privacy-demo.ts",
+    "demo:incentives": "node scripts/incentives-demo.ts",
+    "verify": "node --env-file-if-exists=.env scripts/verify-backend.ts",
+    "api-key": "node --env-file-if-exists=.env scripts/api-key.ts",
+    "e2e:opencode": "node scripts/opencode-e2e.ts"
+  },
+  "dependencies": {
+    "@ramx/shared": "workspace:*",
+    "@hono/node-server": "^2.1.6",
+    "@near-js/accounts": "2.5.1",
+    "@near-js/crypto": "2.5.1",
+    "@near-js/providers": "2.5.1",
+    "@near-js/signers": "2.5.1",
+    "@near-js/types": "2.5.1",
+    "@worldcoin/idkit-core": "4.6.0",
+    "@x402/core": "2.30.0",
+    "@x402/near": "2.30.0",
+    "better-sqlite3": "^13.0.3",
+    "hono": "^4.13.16",
+    "pg": "^8.23.1",
+    "viem": "^2.57.16",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2"
+  }
+}
