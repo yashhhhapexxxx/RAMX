@@ -68,15 +68,8 @@ export const GatewayEnv = z.preprocess(
     /** Account that funds and posts epochs (the x402 treasury: X402_PAY_TO), with its ed25519 key. */
     SETTLER_ACCOUNT_ID: opt,
     SETTLER_KEY: opt,
-    ERC8004_IDENTITY_REGISTRY: opt,
-    ERC8004_REPUTATION_REGISTRY: opt,
-    ERC8004_AGENT_ID: z.string().regex(/^\d+$/).optional(),
-    ERC8004_IMAGE_URL: z.url().optional(),
     /** Counsel opinion reference (docs/LEGAL_CHECK.md). Only logged: the build stays testnet-only. */
     LEGAL_CLEARANCE_REF: opt,
-    /** SPEC §16.4 Swarm: a Bee node and a usable postage batch; each epoch bundle is uploaded before the epoch closes. */
-    BEE_API_URL: opt,
-    BEE_POSTAGE_BATCH_ID: opt,
     EPOCH_SECONDS: z.coerce.number().int().positive().optional(),
     /** Post-MVP P5.4: the gateway writes the admission allow-list here (absolute path, scheduler host). */
     PARALLAX_ALLOWED_PEERS_FILE: opt,

@@ -30,7 +30,6 @@ import { getConnInfo } from "@hono/node-server/conninfo";
 import { PoolPlanResponse } from "@ramx/shared";
 import { poolPlan } from "./formation.ts";
 import { verificationAppealHandler, verificationReadHandler } from "./verification.ts";
-import { agentRegistration } from "./erc8004.ts";
 import { providerRoutes } from "./providers.ts";
 import { ProviderRelay } from "./provider-relay.ts";
 import { providerAvailable } from "./provider-state.ts";
@@ -84,8 +83,6 @@ export function createApp({ cfg, db, signer, x402 = null, worldFetch, directory,
   });
 
   app.get("/healthz", (c) => c.json({ ok: true as const }));
-  app.get("/.well-known/agent-registration.json", (c) => cfg.env.PUBLIC_URL
-    ? c.json(agentRegistration(cfg)) : errorResponse(c, 503, "internal", "agent registration needs PUBLIC_URL"));
 
   // Session if an Authorization header is present (invalid → 401), else x402 (SPEC §5.3 step 2).
   app.post("/v1/chat/completions", session(secret, false, (t) => agentFromToken(db, t)), chatHandler(cfg, makePrepare({ cfg, db, signer, x402, router, queue, observe: onComplete }), stall, (url, init) => {
