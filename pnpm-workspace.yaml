@@ -1,0 +1,12 @@
+packages:
+  - shared
+  - gateway
+  - frontend
+  - agent-client
+  - swarm-sim
+
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
+  # secp256k1 (via @near-js) falls back to its pure-JS implementation; no native build needed.
+  secp256k1: false

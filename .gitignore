@@ -1,0 +1,65 @@
+# secrets
+keys.txt
+.env
+.env.*
+node.env
+!.env.example
+!**/.env.example
+*.key
+p2p.key
+*.pem
+# data
+*.sqlite
+*.sqlite3
+*.db
+*.sqlite-*
+*.sqlite3-*
+*.db-*
+transcripts/
+# deps / builds
+node_modules/
+.next/
+dist/
+out/
+.venv/
+__pycache__/
+*.pyc
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+# models / caches
+*.gguf
+*.safetensors
+.cache/
+# os / editor
+.DS_Store
+.idea/
+.vscode/
+.playwright-cli/
+output/playwright/
+# pool runtime
+pool/*.env
+pool/run/
+pool/logs/
+# contracts deps (install: cd contracts && forge install --no-git foundry-rs/forge-std)
+contracts/lib/
+# gateway runtime data (SQLite file, live-check logs)
+gateway/data/
+# NEAR
+.near-credentials/
+*.near-credentials*
+neardev/
+contracts-near/**/target/
+target/
+*.wasm
+# local agent notes
+AGENT.MD
+# Internal planning docs (kept local, not published)
+docs/PLAN.md
+docs/IMPLEMENTATION.md
+docs/PHASE0.md
+
+# Local agent notes (never pushed)
+AGENTS.md
+CLAUDE.md
+.claude/
