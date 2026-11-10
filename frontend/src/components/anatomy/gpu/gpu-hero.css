@@ -1,0 +1,6 @@
+/* Figure H1: scoped to .gh. The 3D runtime's own rules (materials, layer stacking) come with the scene data. */
+.gh .gh-stage{aspect-ratio:640/440;touch-action:pan-y;cursor:grab;outline:none;border-radius:8px}
+.gh .gh-stage:focus-visible{outline:1px solid var(--anatomy-muted);outline-offset:6px}
+.gh .gh-stage[data-drag]{cursor:grabbing}
+.gh .gh-gl{display:block;mix-blend-mode:screen}
+.gh[data-theme="light"] .gh-gl{mix-blend-mode:normal}
