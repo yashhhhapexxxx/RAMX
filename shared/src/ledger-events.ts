@@ -111,8 +111,6 @@ export const EpochClosedEvent = z.object({
   payouts_hash: Hex32,
   /** Full list if the message stays < 1 KB; otherwise null and the gateway keeps it. */
   payouts: z.array(z.object({ payout_address: NearAccountId, amount_units: TokenUnits })).nullable(),
-  /** SPEC §16.4 Swarm: reference of the epoch bundle (receipts, routes, payouts, Merkle tree inputs). */
-  swarm_ref: z.string().regex(/^[0-9a-f]{64}$/).optional(),
 });
 
 export const PayoutClaimedEvent = z.object({

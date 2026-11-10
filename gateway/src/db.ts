@@ -7,7 +7,7 @@ import Database from "better-sqlite3";
  * base-unit decimal strings, times are Unix ms. No migrations (dev phase): when SCHEMA_VERSION
  * changes, delete the database file and restart.
  */
-export const SCHEMA_VERSION = 21;
+export const SCHEMA_VERSION = 22;
 
 export const TABLES = [
   "provider_pools", "provider_members", "provider_enrollments",
@@ -177,8 +177,7 @@ CREATE TABLE IF NOT EXISTS epochs (
   post_tx        TEXT,                               -- NEAR tx of the funding ft_transfer_call
   status         TEXT NOT NULL,
   ledger_event_id    INTEGER REFERENCES ledger_events(id),
-  claimable_at   INTEGER,                            -- ms: claims open on the payout contract
-  swarm_ref      TEXT                                -- §16.4: Swarm reference of the epoch bundle
+  claimable_at   INTEGER                             -- ms: claims open on the payout contract
 );
 CREATE TABLE IF NOT EXISTS epoch_payouts (
   epoch           INTEGER NOT NULL REFERENCES epochs(epoch),

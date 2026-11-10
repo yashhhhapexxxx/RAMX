@@ -24,8 +24,6 @@ export type EpochState = {
   opensAt: number;
   swept: boolean;
 };
-/** SPEC §16.4: where the epoch bundle goes (Swarm). Returns the reference. */
-export type BundleStore = { upload(name: string, json: string): Promise<string> };
 export type SettlementChain = {
   /** Check the contract's settler and token match this gateway's configuration. */
   verify(): Promise<void>;
@@ -62,17 +60,8 @@ export function providerPayouts(cfg: Config, requests: PaidRequest[]): MerkleLea
 
 type EpochRow = { epoch: number; total_units: string; merkle_root: Hash; status: string; ledger_event_id: number; post_tx: string | null };
 
-/** Everything a third party needs to rebuild an epoch's Merkle root and audit its income (no transcripts, no prompts). */
-export function epochBundle(db: Db, signerPublicKey: string, epoch: number, start: number, end: number, tree: { root: Hash; hash: Hash; payouts: MerkleLeaf[] }, total: string) {
-  const receipts = (db.prepare(`SELECT req_id, model, status, x402_payer, x402_tx, x402_amount, x402_asset, in_tokens, out_tokens, payout_snapshot, prompt_hash, resp_hash, route_source, ts
-    FROM requests WHERE pay_type = 'x402' AND ts >= ? AND ts < ? ORDER BY ts, req_id`).all(start, end) as (Record<string, unknown> & { payout_snapshot: string | null })[])
-    .map((r) => ({ ...r, payout_snapshot: r.payout_snapshot ? JSON.parse(r.payout_snapshot) : null }));
-  return { version: 1, gateway_pubkey: signerPublicKey, epoch, start_ts: start, end_ts: end, total_units: total,
-    merkle_root: tree.root, payouts_hash: tree.hash, payouts: tree.payouts, receipts };
-}
-
 /** One worker owns the settler account. Closed epoch snapshots survive restarts. */
-export function createSettlement(db: Db, cfg: Config, signer: Signer, chain: SettlementChain, store?: BundleStore) {
+export function createSettlement(db: Db, cfg: Config, signer: Signer, chain: SettlementChain) {
   const duration = (cfg.env.EPOCH_SECONDS ?? 600) * 1000;
   let running = false;
 
@@ -89,25 +78,14 @@ export function createSettlement(db: Db, cfg: Config, signer: Signer, chain: Set
       const unique = rows.filter((r) => r.x402_tx && (db.prepare(`SELECT req_id FROM requests WHERE pay_type = 'x402' AND x402_tx = ? ORDER BY ts, req_id LIMIT 1`).get(r.x402_tx) as { req_id: string }).req_id === r.req_id);
       const tree = payoutTree(epoch, providerPayouts(cfg, unique));
       const total = tree.payouts.reduce((sum, p) => sum + BigInt(p.amount_units), 0n).toString();
-      // SPEC §16.4 Swarm: the bundle goes out first, so every closed epoch has a reference. A Bee outage
-      // delays the close (retried next tick); it never closes an epoch without its bundle.
-      let swarmRef: string | undefined;
-      if (store) {
-        try {
-          swarmRef = await store.upload(`epoch-${epoch}.json`, canonicalJson(epochBundle(db, signer.publicKeyHex, epoch, start, start + duration, tree, total)));
-        } catch (e) {
-          console.error(`epoch ${epoch}: Swarm upload failed, close retried: ${(e as Error).message}`);
-          continue;
-        }
-      }
       let event: UnsignedEvent = { type: "epoch_closed", epoch, start_ts: start, end_ts: start + duration,
-        total_units: total, merkle_root: tree.root, payouts_hash: tree.hash, payouts: tree.payouts, ...(swarmRef ? { swarm_ref: swarmRef } : {}) };
+        total_units: total, merkle_root: tree.root, payouts_hash: tree.hash, payouts: tree.payouts };
       if (Buffer.byteLength(canonicalJson(signEvent(signer, event, now))) >= 4096) event = { ...event, payouts: null }; // ledger contract limit
       db.transaction(() => {
         recordEvent(db, signer, event, now);
         const id = (db.prepare("SELECT last_insert_rowid() AS id").get() as { id: number }).id;
-        db.prepare(`INSERT INTO epochs (epoch, start_ts, end_ts, total_units, merkle_root, status, ledger_event_id, swarm_ref)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(epoch, start, start + duration, total, tree.root, tree.payouts.length ? "closed" : "empty", id, swarmRef ?? null);
+        db.prepare(`INSERT INTO epochs (epoch, start_ts, end_ts, total_units, merkle_root, status, ledger_event_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`).run(epoch, start, start + duration, total, tree.root, tree.payouts.length ? "closed" : "empty", id);
         for (const p of tree.proofs) db.prepare(`INSERT INTO epoch_payouts (epoch, payout_address, amount_units, proof)
           VALUES (?, ?, ?, ?)`).run(epoch, p.payout_address, p.amount_units, JSON.stringify(p.proof));
       })();

@@ -15,7 +15,6 @@ import { refreshReliability } from "./reliability.ts";
 import { expireEarned, payAvailability, runPenalties, unlockDue } from "./incentives.ts";
 import { createSettlement, startSettlementWorker } from "./settlement.ts";
 import { nearSettlementChain } from "./payout-near.ts";
-import { swarmStore } from "./swarm.ts";
 import { legalGate } from "./legal.ts";
 import { createX402, httpFacilitator, localNearFacilitator } from "./x402.ts";
 import { nearAiClient, sampleForJudge, startTeeJudge } from "./tee-judge.ts";
@@ -90,9 +89,7 @@ let stopSettlement = () => {};
 if (e.PAYOUT_CONTRACT_ID) {
   if (!e.LEDGER_CONTRACT_ID || !e.NEAR_GATEWAY_ACCOUNT_ID || !e.NEAR_GATEWAY_KEY) throw new Error("epoch settlement requires the NEAR ledger writer configuration");
   const chain = nearSettlementChain(cfg);
-  const store = swarmStore(cfg);
-  if (store) console.log("Swarm bundles on: each closed epoch is uploaded to Bee before it is committed to the ledger");
-  stopSettlement = startSettlementWorker(createSettlement(db, cfg, signer, chain, store));
+  stopSettlement = startSettlementWorker(createSettlement(db, cfg, signer, chain));
 } else {
   console.warn("epoch settlement disabled: set PAYOUT_CONTRACT_ID, SETTLER_ACCOUNT_ID and SETTLER_KEY to enable");
 }
