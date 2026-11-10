@@ -16,7 +16,8 @@
     "demo:incentives": "node scripts/incentives-demo.ts",
     "verify": "node --env-file-if-exists=.env scripts/verify-backend.ts",
     "api-key": "node --env-file-if-exists=.env scripts/api-key.ts",
-    "e2e:opencode": "node scripts/opencode-e2e.ts"
+    "e2e:opencode": "node scripts/opencode-e2e.ts",
+    "e2e:testnet": "node --env-file-if-exists=.env scripts/e2e-testnet.ts"
   },
   "dependencies": {
     "@ramx/shared": "workspace:*",
