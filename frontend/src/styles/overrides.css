@@ -1,0 +1,59 @@
+/* Carried over from quil's conversation.css: the only rules that affect the landing and the shared sheet. */
+.nav-pill a {
+  font-size: 15px;
+}
+.side-sheet {
+  color: #f4f5f8;
+  background: #0c111c;
+}
+@media (max-width: 600px) {
+  .side-sheet {
+    padding-inline: 22px;
+  }
+}
+
+/* Pod crew: compact variant for the playground route trace, plus route highlighting. */
+.crew-scene-mini {
+  height: 210px;
+}
+.crew-scene-mini .crew-person:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.crew-scene-mini .crew-person-role {
+  display: none;
+}
+.crew-scene-mini .crew-member {
+  --sprite-size: 64px;
+  transition:
+    left 1.9s cubic-bezier(0.4, 0, 0.2, 1),
+    top 1.9s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.4s,
+    filter 0.4s;
+}
+.crew-scene-mini .crew-member-quil {
+  --sprite-size: 76px;
+}
+.crew-member.is-dim {
+  opacity: 0.35;
+  filter: saturate(0.4);
+}
+.crew-member.is-active .agent-sprite {
+  filter: drop-shadow(0 0 14px var(--agent-color));
+}
+
+/* Pod roles ("RTX 4060 · 8 GB") are longer than quil's: let them wrap on phones. */
+@media (max-width: 600px) {
+  .crew-scene-landing .crew-person-role {
+    white-space: normal;
+    max-width: 74px;
+    margin-inline: auto;
+    line-height: 1.35;
+    text-align: center;
+  }
+}
+
+/* Keep the speaking member's bubble above the larger coordinator sprite. */
+.crew-member.is-speaking {
+  z-index: 4;
+}
