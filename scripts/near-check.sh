@@ -5,7 +5,7 @@
 set -uo pipefail
 PARENT="${PARENT:-ramx.testnet}"
 USDC=3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af
-RPC=https://rpc.testnet.near.org
+RPC=https://rpc.testnet.fastnear.com
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FAIL=0
 ok() { printf '  OK    %s\n' "$*"; }
