@@ -18,6 +18,7 @@ import { nearSettlementChain } from "./payout-near.ts";
 import { legalGate } from "./legal.ts";
 import { createX402, httpFacilitator, localNearFacilitator } from "./x402.ts";
 import { nearAiClient, sampleForJudge, startTeeJudge } from "./tee-judge.ts";
+import { attestServed, NEARAI_POOL_ID, nearAiBase, nearAiFallbackOn } from "./nearai-upstream.ts";
 import { startMarket } from "./market.ts";
 import { maybeQueueVerification, startCanaryWorker, startVerificationWorker } from "./verification.ts";
 
@@ -109,11 +110,19 @@ if (verificationOn && e.VERIFIER_URL && e.VERIFIER_OWNER_ACCOUNT) {
 const stopMarket = startMarket(db, cfg, signer);
 // Phase 6.2: TEE spot-check of a sample of answers (NEAR AI Cloud).
 const teeRate = e.TEE_JUDGE_RATE ?? 0.1;
-const stopTee = e.NEARAI_API_KEY ? startTeeJudge(db, cfg, signer, nearAiClient(e.NEARAI_API_KEY), e.TEE_JUDGE_MODEL) : () => {};
-if (!e.NEARAI_API_KEY) console.warn("TEE spot-check off (NEARAI_API_KEY not set)");
+const nearAi = e.NEARAI_API_KEY ? nearAiClient(e.NEARAI_API_KEY, nearAiBase(cfg)) : null;
+const stopTee = nearAi ? startTeeJudge(db, cfg, signer, nearAi, e.TEE_JUDGE_MODEL) : () => {};
+if (!nearAi) console.warn("TEE spot-check and judge mode off (NEARAI_API_KEY not set)");
+else if (nearAiFallbackOn(cfg)) console.log("judge mode on: requests with no ready pool (or x-ramx-privacy: tee) are served by NEAR AI Cloud");
 const app = createApp({ cfg, db, signer, x402, router, queue, directory, onComplete: (completion) => {
   logCompletion(completion);
-  if (e.NEARAI_API_KEY && sampleForJudge(db, completion, teeRate)) console.log(JSON.stringify({ msg: "tee_check_queued", req_id: completion.reqId }));
+  if (nearAi && completion.poolId !== NEARAI_POOL_ID && sampleForJudge(db, completion, teeRate)) console.log(JSON.stringify({ msg: "tee_check_queued", req_id: completion.reqId }));
+  // Judge mode: attest the NEAR AI model that served this answer (fresh nonce), off the request path.
+  if (nearAi && completion.ok && completion.poolId === NEARAI_POOL_ID) {
+    attestServed(db, cfg, nearAi, completion)
+      .then((a) => a && console.log(JSON.stringify({ msg: "tee_attested", req_id: completion.reqId, model: a.model, signing_address: a.signing_address })))
+      .catch((err) => console.warn(`tee attestation ${completion.reqId} failed: ${(err as Error).message}`));
+  }
   if (completion.ok && verificationOn) {
     const id = maybeQueueVerification(db, cfg, completion.reqId);
     if (id) console.log(JSON.stringify({ msg: "verification_queued", verification_id: id, req_id: completion.reqId }));
