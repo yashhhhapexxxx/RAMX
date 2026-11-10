@@ -1,0 +1,391 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Layer split + query simulator (components/sim/LayerSim.tsx).
+   Works on the landing (no console vars) and in the console, so every var has a fallback.
+   ───────────────────────────────────────────────────────────────────────── */
+.sim {
+  --sim-line: rgba(199, 210, 239, 0.14);
+  --sim-panel: #070a12;
+  display: grid;
+  gap: 22px;
+  padding: 24px;
+  border: 1px solid var(--sim-line);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #060912, #030407);
+  color: var(--text, #f2f3f7);
+  text-align: left;
+}
+.sim .faint {
+  color: var(--faint, #606879);
+}
+.sim .select {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(199, 210, 239, 0.2);
+  border-radius: 8px;
+  background: #0b0f19;
+  color: var(--text, #f2f3f7);
+  font-size: 13px;
+}
+.sim .tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--sim-line);
+  border-radius: 9px;
+}
+.sim .tabs button {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted, #9297a6);
+  font: 11px var(--display);
+  letter-spacing: 0.04em;
+}
+.sim .tabs button.is-active {
+  background: #ffffff12;
+  color: var(--text, #f2f3f7);
+}
+.sim .tabs button:disabled {
+  opacity: 0.45;
+}
+.sim button:focus-visible,
+.sim select:focus-visible,
+.sim input:focus-visible {
+  outline: 2px solid var(--blue, #278cff);
+  outline-offset: 2px;
+}
+
+/* controls */
+.sim-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px 22px;
+}
+.sim-field {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted, #9297a6);
+}
+.sim-field b {
+  color: var(--text, #f2f3f7);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.sim-range {
+  min-width: 170px;
+}
+.sim-range input {
+  accent-color: var(--blue, #278cff);
+}
+.sim-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 3px;
+  border: 1px solid var(--sim-line);
+  border-radius: 8px;
+}
+.sim-stepper .icon-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #ffffff08;
+  color: var(--text, #f2f3f7);
+  font-size: 16px;
+}
+.sim-stepper .icon-button:disabled {
+  opacity: 0.35;
+}
+.sim-stepper output {
+  min-width: 26px;
+  text-align: center;
+  font: 15px var(--display);
+}
+
+/* model bar */
+.sim-model-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.sim-model-name {
+  font: 17px var(--display);
+}
+.sim-bar {
+  display: flex;
+  gap: 2px;
+  height: 22px;
+}
+.sim-cell {
+  flex: 1;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--c, #3a3f4c) 38%, #0b0f19);
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    transform 0.2s;
+}
+.sim-cell.is-done {
+  background: color-mix(in srgb, var(--c, #3a3f4c) 70%, #0b0f19);
+}
+.sim-cell.is-hot {
+  background: #cfe6ff;
+  box-shadow: 0 0 12px rgba(39, 140, 255, 0.7);
+  transform: scaleY(1.25);
+}
+.sim-warn {
+  margin: 10px 0 0;
+  color: var(--muted, #9297a6);
+  font-size: 13px;
+}
+
+/* laptops */
+.sim-laptops {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sim-laptop {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  text-align: center;
+}
+.sim-screen {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: 100%;
+  max-width: 120px;
+  aspect-ratio: 16 / 10;
+  border: 1.5px solid color-mix(in srgb, var(--c) 50%, transparent);
+  border-radius: 8px 8px 2px 2px;
+  background: color-mix(in srgb, var(--c) 7%, #05070d);
+  transition:
+    box-shadow 0.2s,
+    background 0.2s,
+    border-color 0.2s;
+}
+.sim-base {
+  width: calc(100% + 8px);
+  max-width: 134px;
+  height: 6px;
+  margin-top: -6px;
+  border-radius: 0 0 6px 6px;
+  background: color-mix(in srgb, var(--c) 40%, #10131c);
+}
+.sim-layers {
+  color: var(--c);
+  font: 13px var(--display);
+}
+.sim-count {
+  color: var(--muted, #9297a6);
+  font-size: 11px;
+}
+.sim-laptop.is-hot .sim-screen {
+  border-color: #278cff;
+  background: color-mix(in srgb, #278cff 14%, #05070d);
+  box-shadow: 0 0 20px rgba(39, 140, 255, 0.3);
+}
+.sim-laptop.is-done .sim-screen {
+  border-color: color-mix(in srgb, var(--c) 85%, transparent);
+}
+.sim-name {
+  max-width: 100%;
+  overflow: hidden;
+  font: 13px var(--display);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sim-sub {
+  font-size: 11px;
+}
+.sim-mem .select {
+  height: 28px;
+  font-size: 12px;
+}
+.sim-membar {
+  width: 100%;
+  max-width: 120px;
+  height: 4px;
+  border-radius: 2px;
+  background: #ffffff10;
+  overflow: hidden;
+}
+.sim-membar i {
+  display: block;
+  height: 100%;
+  background: var(--c);
+  transition: width 0.3s;
+}
+.sim-earn {
+  min-height: 18px;
+  color: var(--muted, #9297a6);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.sim.is-settled .sim-earn {
+  color: var(--text, #f2f3f7);
+  animation: sim-credit 0.5s calc(var(--i) * 90ms) both;
+}
+@keyframes sim-credit {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.sim-you {
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--sim-line);
+  border-radius: 12px;
+  background: none;
+  color: var(--faint, #606879);
+  font-size: 11px;
+}
+.sim-you.is-on {
+  border-color: #278cff;
+  color: var(--cyan, #a1d6ff);
+}
+.sim-token {
+  position: absolute;
+  top: -14px;
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 10px 2px rgba(39, 140, 255, 0.5);
+  transition: left 0.45s cubic-bezier(0.5, 0, 0.3, 1);
+  pointer-events: none;
+}
+
+/* run + ledger */
+.sim-run {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+.sim-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted, #9297a6);
+  font-size: 13px;
+}
+.sim-check input {
+  accent-color: var(--blue, #278cff);
+}
+.sim-ledger {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 16px;
+}
+.sim-cost,
+.sim-loop {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--sim-line);
+  border-radius: 12px;
+  background: var(--sim-panel);
+  font-size: 14px;
+}
+.sim-cost p,
+.sim-loop p {
+  margin: 0;
+  line-height: 1.5;
+}
+.sim-formula {
+  font: 15px var(--display);
+  font-variant-numeric: tabular-nums;
+}
+.sim-formula b,
+.sim-loop b {
+  color: var(--text, #f2f3f7);
+  font-weight: 500;
+}
+.sim-split {
+  display: flex;
+  gap: 2px;
+  height: 26px;
+  font-size: 11px;
+}
+.sim-split span {
+  display: flex;
+  align-items: center;
+  min-width: 74px;
+  padding: 0 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.sim-split-nodes {
+  background: rgba(39, 140, 255, 0.16);
+  color: #cfe6ff;
+}
+.sim-split-burn {
+  background: rgba(242, 243, 247, 0.06);
+  color: var(--muted, #9297a6);
+}
+.sim-split-reserve {
+  background: rgba(161, 214, 255, 0.12);
+  color: var(--cyan, #a1d6ff);
+}
+.sim-note {
+  font-size: 12px;
+}
+.sim-loop {
+  transition: border-color 0.3s;
+}
+.sim-loop.is-on {
+  border-color: rgba(39, 140, 255, 0.55);
+}
+.sim-source {
+  margin: -8px 0 0;
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .sim {
+    padding: 16px;
+  }
+  .sim-laptops {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    row-gap: 22px;
+  }
+  .sim-token {
+    display: none;
+  }
+  .sim-ledger {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sim *,
+  .sim.is-settled .sim-earn {
+    transition: none;
+    animation: none;
+  }
+}
+
