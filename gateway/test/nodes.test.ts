@@ -28,7 +28,7 @@ before(async () => {
     req.on("end", () => {
       if (fakeFail) { res.statusCode = 500; res.end("boom"); return; }
       res.setHeader("content-type", "application/json");
-      res.end(JSON.stringify({ id: "x", object: "chat.completion", created: 1, model: "x", choices: [{ index: 0, message: { role: "assistant", content: "Hi" }, finish_reason: "stop" }], usage: { prompt_tokens: 40, completion_tokens: 100, total_tokens: 140 } }));
+      res.end(JSON.stringify({ id: "x", object: "chat.completion", created: 1, model: "x", choices: [{ index: 0, message: { role: "assistant", content: "Hi there. ".repeat(30) }, finish_reason: "stop" }], usage: { prompt_tokens: 40, completion_tokens: 100, total_tokens: 140 } }));
     });
   });
   await new Promise<void>((r) => fake.listen(0, "127.0.0.1", r));
@@ -183,7 +183,7 @@ test("credits end to end: hold → settle → split to node owners by layers (se
   const rel = db.prepare("SELECT requests_routed, requests_ok FROM node_reliability WHERE node_id = ?").get(id(0)) as { requests_routed: number; requests_ok: number };
   assert.deepEqual({ ...rel }, { requests_routed: 1, requests_ok: 1 });
   const tr = db.prepare("SELECT prompt, response, expires_at FROM transcripts WHERE req_id = ?").get(receipt.req_id) as { prompt: string; response: string; expires_at: number };
-  assert.equal(tr.response, "Hi");
+  assert.equal(tr.response, "Hi there. ".repeat(30));
   assert.ok(tr.expires_at > Date.now() + 6 * 86_400_000);
 
   // Failed request: hold released, cost 0, reliability penalty, no settle event.

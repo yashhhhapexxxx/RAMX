@@ -269,7 +269,7 @@ before(async () => {
     req.resume();
     req.on("end", () => {
       res.setHeader("content-type", "application/json");
-      res.end(JSON.stringify({ id: "x", object: "chat.completion", created: 1, model: MODEL, choices: [{ index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" }], usage: { prompt_tokens: 10, completion_tokens: 10, total_tokens: 20 } }));
+      res.end(JSON.stringify({ id: "x", object: "chat.completion", created: 1, model: MODEL, choices: [{ index: 0, message: { role: "assistant", content: "okay. ".repeat(5) }, finish_reason: "stop" }], usage: { prompt_tokens: 10, completion_tokens: 10, total_tokens: 20 } }));
     });
   });
   await new Promise<void>((r) => pool.listen(0, "127.0.0.1", r));

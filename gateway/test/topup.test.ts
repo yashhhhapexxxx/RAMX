@@ -37,7 +37,7 @@ function fakeX402(o: { tx?: string; refuse?: boolean } = {}) {
 function upstream(usage: { prompt_tokens: number; completion_tokens: number } | "fail") {
   return (async () => usage === "fail"
     ? new Response("boom", { status: 500 })
-    : new Response(`data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "ok" } }] })}\n\ndata: ${JSON.stringify({ choices: [], usage: { ...usage, total_tokens: usage.prompt_tokens + usage.completion_tokens } })}\n\ndata: [DONE]\n\n`, { headers: { "content-type": "text/event-stream" } })) as typeof fetch;
+    : new Response(`data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: "tok ".repeat(usage.completion_tokens) } }] })}\n\ndata: ${JSON.stringify({ choices: [], usage: { ...usage, total_tokens: usage.prompt_tokens + usage.completion_tokens } })}\n\ndata: [DONE]\n\n`, { headers: { "content-type": "text/event-stream" } })) as typeof fetch;
 }
 
 async function setup(budgetMc: number | null = null, x = fakeX402()) {

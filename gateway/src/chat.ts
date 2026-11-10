@@ -27,6 +27,8 @@ export type Completion = {
   reason?: FailReason;
   /** Content chunks the LAST attempt sent (about 1 token each). */
   streamedTokens?: number;
+  /** Pool that served the final attempt (set by billing for observers). */
+  poolId?: string;
 };
 export type OnComplete = (c: Completion) => void;
 

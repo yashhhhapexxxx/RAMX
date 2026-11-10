@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto";
 import type { Context } from "hono";
 import { canonicalJson, MAX_TOKENS_HEADER, PRICE_HEADER, type ChatCompletionRequest, type ModelConfig, type PayoutRoute, type RequestAttempt, type Route } from "@ramx/shared";
+import { takeSlot } from "./market.ts";
 import type { Completion, Failover, OnComplete, Prepare, Prepared } from "./chat.ts";
 import type { Config } from "./config.ts";
 import type { Db } from "./db.ts";
 import { errorResponse } from "./errors.ts";
 import { recordEvent, type Signer } from "./events.ts";
-import { availableMc, estimateInputTokens, holdMc, keyAvailableMc, releaseHold, releaseKeyHold, settle, tryHold, tryHoldForKey } from "./ledger.ts";
+import { availableMc, countedOutput, estimateInputTokens, observedOutputTokens, holdMc, keyAvailableMc, releaseHold, releaseKeyHold, settle, tryHold, tryHoldForKey } from "./ledger.ts";
 import { contributionRatio } from "./accounts.ts";
 import { countPool, countRouted } from "./reliability.ts";
 import { agentBudgetLeft, chargeAgent, recordPoolWait } from "./incentives.ts";
@@ -139,7 +140,11 @@ export function makePrepare(d: BillingDeps): Prepare {
     const price = d.router.pricing.quote(model);
     const priceHeader = JSON.stringify(price);
     const ratioRow = accountId ? db.prepare("SELECT earned_total_mc, spent_total_mc FROM balances WHERE account_id = ?").get(accountId) as { earned_total_mc: number; spent_total_mc: number } | undefined : undefined;
-    const ratio = accountId ? contributionRatio(ratioRow?.earned_total_mc ?? 0, ratioRow?.spent_total_mc ?? 0) : 1;
+    // Phase 7: a slot won in the capacity market puts this request at the front of the pool queue.
+    const nearAccount = accountId ? ((db.prepare("SELECT near_account FROM accounts WHERE id = ?").get(accountId) as { near_account: string | null } | undefined)?.near_account ?? null) : null;
+    const slot = takeSlot(db, nearAccount, model.model_id);
+    if (slot) c.header("x-ramx-swarm-slot", "1");
+    const ratio = slot ? Number.MAX_SAFE_INTEGER : accountId ? contributionRatio(ratioRow?.earned_total_mc ?? 0, ratioRow?.spent_total_mc ?? 0) : 1;
     let releaseQueue: () => void;
     try {
       const waitStart = Date.now();
@@ -224,6 +229,14 @@ export function makePrepare(d: BillingDeps): Prepare {
           exact && payType === "x402" ? JSON.stringify(payoutSnapshot(db, exact)) : null, reqId);
         return cur.route;
       };
+      /** Billed output tokens (Phase 6.1); an over-count is logged and costs the pool reliability. */
+      const outputOf = (comp: Completion) => {
+        const reported = comp.usage!.completion_tokens;
+        const observed = observedOutputTokens(comp.text, comp.streamedTokens ?? 0);
+        const r = countedOutput(reported, observed);
+        if (r.overcount) console.warn(JSON.stringify({ msg: "output_overcount", reqId, pool: cur.poolId, reported, observed, billed: r.billed }));
+        return r;
+      };
       const trackedFinish = (finish: OnComplete): OnComplete => {
         releaseActive = d.router.start(cur.poolId);
         prepared = true;
@@ -278,14 +291,15 @@ export function makePrepare(d: BillingDeps): Prepare {
             try {
               saveAttempts(comp);
               if (comp.ok && comp.usage) {
+                const out = outputOf(comp);
                 // Commit billing, the transcript and its reliability outcome together. A later
                 // database failure must not leave a charged request marked as failed.
                 db.transaction(() => {
-                  const settled = settle(db, cfg.net, signer, { reqId, accountId, model, hold, inTokens: comp.usage!.prompt_tokens, outTokens: comp.usage!.completion_tokens, route, promptHash: pHash, respHash: respHashOf(comp.text), priceMultiplier: price.multiplier, ...(agentId ? { key: { agentId, held: keyHeld } } : {}) });
+                  const settled = settle(db, cfg.net, signer, { reqId, accountId, model, hold, inTokens: comp.usage!.prompt_tokens, outTokens: out.billed, route, promptHash: pHash, respHash: respHashOf(comp.text), priceMultiplier: price.multiplier, ...(agentId ? { key: { agentId, held: keyHeld } } : {}) });
                   if (agentId) chargeAgent(db, agentId, reqId, settled.cost);
                   db.prepare("UPDATE transcripts SET response = ? WHERE req_id = ?").run(seal(cfg, comp.text), reqId);
                   countRouted(db, cfg, route, true);
-                  countPool(db, cfg, cur.poolId, true);
+                  countPool(db, cfg, cur.poolId, !out.overcount);
                 })();
               } else {
                 db.transaction(() => {
@@ -299,7 +313,7 @@ export function makePrepare(d: BillingDeps): Prepare {
               release();
               db.prepare("UPDATE requests SET status = 'failed' WHERE req_id = ?").run(reqId);
             }
-            d.observe?.(comp);
+            d.observe?.({ ...comp, poolId: cur.poolId });
           }),
         };
       }
@@ -320,11 +334,12 @@ export function makePrepare(d: BillingDeps): Prepare {
             saveAttempts(comp);
             if (comp.ok && comp.usage) {
               const respHash = respHashOf(comp.text);
+              const out = outputOf(comp);
               db.transaction(() => {
-                db.prepare("UPDATE requests SET status = 'ok', in_tokens = ?, out_tokens = ?, resp_hash = ? WHERE req_id = ?").run(comp.usage!.prompt_tokens, comp.usage!.completion_tokens, respHash, reqId);
+                db.prepare("UPDATE requests SET status = 'ok', in_tokens = ?, out_tokens = ?, resp_hash = ? WHERE req_id = ?").run(comp.usage!.prompt_tokens, out.billed, respHash, reqId);
                 db.prepare("UPDATE transcripts SET response = ? WHERE req_id = ?").run(seal(cfg, comp.text), reqId);
                 countRouted(db, cfg, route, true);
-                countPool(db, cfg, cur.poolId, true);
+                countPool(db, cfg, cur.poolId, !out.overcount);
                 recordEvent(db, signer, {
                   type: "x402_payment",
                   req_id: reqId as `req_${string}`,
@@ -334,7 +349,7 @@ export function makePrepare(d: BillingDeps): Prepare {
                   asset: paid.asset,
                   model: model.model_id,
                   in_tokens: comp.usage!.prompt_tokens,
-                  out_tokens: comp.usage!.completion_tokens,
+                  out_tokens: out.billed,
                   route,
                   pay: "x402",
                   prompt_hash: pHash as `0x${string}`,
@@ -349,7 +364,7 @@ export function makePrepare(d: BillingDeps): Prepare {
           } catch (e) {
             console.error(`billing ${reqId}: x402 record failed: ${(e as Error).message}`);
           }
-          d.observe?.(comp);
+          d.observe?.({ ...comp, poolId: cur.poolId });
         }),
       };
     } finally {

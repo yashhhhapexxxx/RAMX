@@ -134,7 +134,7 @@ test("non-streaming: forwards with thinking off, no logprobs, req id header + bo
   assert.equal("logprobs" in up, false);
   assert.equal("max_completion_tokens" in up, false);
   assert.equal(completions.length, 1);
-  assert.deepEqual(completions[0], { reqId, model: MODEL, usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 }, text: "Hello there", ok: true });
+  assert.deepEqual(completions[0], { reqId, model: MODEL, usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 }, text: "Hello there", ok: true, poolId: "pool-router-test" });
 });
 
 test("non-streaming: client-set enable_thinking is kept; default max_tokens from config", async () => {

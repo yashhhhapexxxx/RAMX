@@ -56,6 +56,15 @@ export const GatewayEnv = z.preprocess(
     NEAR_RPC_URL: z.url().optional(),
     /** contracts-near/payout: epoch Merkle roots funded in USDC; providers claim. Setting it turns epoch settlement on. */
     PAYOUT_CONTRACT_ID: opt,
+    /** contracts-near/escrow: guarded agents pay the treasury through it (POST /v1/credits/escrow). */
+    ESCROW_CONTRACT_ID: opt,
+    /** NEAR AI Cloud API key: TEE spot-check judge (Phase 6.2). Unset = no spot-checks. */
+    NEARAI_API_KEY: opt,
+    /** Share of served answers sent to the TEE judge (0–1, default 0.1). Privacy requests are never sampled. */
+    TEE_JUDGE_RATE: z.coerce.number().min(0).max(1).optional(),
+    TEE_JUDGE_MODEL: opt,
+    /** Capacity market round length in seconds (swarm-sim/RULES.md); default 30. */
+    SWARM_ROUND_S: z.coerce.number().int().min(3).max(3600).optional(),
     /** Account that funds and posts epochs (the x402 treasury: X402_PAY_TO), with its ed25519 key. */
     SETTLER_ACCOUNT_ID: opt,
     SETTLER_KEY: opt,

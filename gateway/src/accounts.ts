@@ -38,7 +38,7 @@ export function loginOrCreate(db: Db, cfg: Config, signer: Signer, nullifier: st
 export function me(db: Db, cfg: Config, accountId: string, now = Date.now()): MeResponse | null {
   const a = db.prepare("SELECT id, payout_address FROM accounts WHERE id = ?").get(accountId) as { id: string; payout_address: string | null } | undefined;
   if (!a) return null;
-  const b = db.prepare("SELECT starter_mc, starter_expires_at, earned_mc, held_mc, earned_total_mc, spent_total_mc FROM balances WHERE account_id = ?").get(accountId) as MeResponse["balance"];
+  const b = db.prepare("SELECT starter_mc, starter_expires_at, bought_mc, earned_mc, held_mc, earned_total_mc, spent_total_mc FROM balances WHERE account_id = ?").get(accountId) as MeResponse["balance"];
   const owned = db.prepare("SELECT node_id FROM nodes WHERE account_id = ?").all(accountId) as { node_id: string }[];
   for (const n of owned) refreshReliability(db, cfg, n.node_id, now);
   const fresh = now - cfg.net.router.pool_heartbeat_max_age_s * 1000;

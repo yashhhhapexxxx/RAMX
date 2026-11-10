@@ -108,11 +108,11 @@ export function expireEarned(db: Db, cfg: RamxConfig, signer: Signer, now = Date
     const accounts = db.prepare("SELECT DISTINCT account_id FROM earned_lots WHERE status = 'unlocked' AND remaining_mc > 0 AND unlock_at <= ?").all(cutoff) as { account_id: string }[];
     let n = 0;
     for (const { account_id } of accounts) {
-      const b = db.prepare("SELECT starter_mc, starter_expires_at, earned_mc, held_mc FROM balances WHERE account_id = ?").get(account_id) as { starter_mc: number; starter_expires_at: number | null; earned_mc: number; held_mc: number };
+      const b = db.prepare("SELECT starter_mc, starter_expires_at, bought_mc, earned_mc, held_mc FROM balances WHERE account_id = ?").get(account_id) as { starter_mc: number; starter_expires_at: number | null; bought_mc: number; earned_mc: number; held_mc: number };
       const starter = b.starter_expires_at !== null && b.starter_expires_at > now ? b.starter_mc : 0;
       const old = db.prepare("SELECT id, remaining_mc FROM earned_lots WHERE account_id = ? AND status = 'unlocked' AND remaining_mc > 0 AND unlock_at <= ? ORDER BY unlock_at, id").all(account_id, cutoff) as { id: number; remaining_mc: number }[];
       const due = old.reduce((s, l) => s + l.remaining_mc, 0);
-      const amount = Math.min(due, b.earned_mc, Math.max(0, starter + b.earned_mc - b.held_mc));
+      const amount = Math.min(due, b.earned_mc, Math.max(0, starter + b.bought_mc + b.earned_mc - b.held_mc));
       if (amount <= 0) continue;
       let left = amount;
       for (const l of old) {
@@ -369,18 +369,33 @@ export function keyCredits(db: Db, cfg: RamxConfig, agentId: string, now = Date.
 export const topupMc = (cfg: RamxConfig, units: bigint): number => Number((units * BigInt(cfg.topup.credits_per_usdc) * 1000n) / 10n ** BigInt(cfg.x402_near.decimals));
 
 /**
- * Credit a settled x402 top-up to the key, once per NEAR transaction. false = this tx was
- * already credited (replay). The USDC stays in the treasury; it is not epoch payout income.
+ * Credit a USDC payment to an API key (x402 top-up, or a guarded agent's escrow payment), once per
+ * NEAR transaction. null = this tx was already credited (replay). The USDC stays in the treasury;
+ * it is not epoch payout income.
  */
-export function creditTopup(db: Db, cfg: RamxConfig, signer: Signer, t: { agentId: string; payer: string; tx: string; units: string }, now = Date.now()): { added: number } | null {
+export function creditTopup(db: Db, cfg: RamxConfig, signer: Signer, t: { agentId: string; payer: string; tx: string; units: string; via?: "x402" | "escrow" }, now = Date.now()): { added: number } | null {
   return db.transaction(() => {
     const k = db.prepare("SELECT account_id FROM agent_keys WHERE id = ?").get(t.agentId) as { account_id: string };
     const mc = topupMc(cfg, BigInt(t.units));
-    const ins = db.prepare("INSERT OR IGNORE INTO key_topups (tx_id, agent_id, account_id, payer, amount_units, amount_mc, ts) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .run(t.tx, t.agentId, k.account_id, t.payer, t.units, mc, now);
+    const via = t.via ?? "x402";
+    const ins = db.prepare("INSERT OR IGNORE INTO key_topups (tx_id, agent_id, via, account_id, payer, amount_units, amount_mc, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(t.tx, t.agentId, via, k.account_id, t.payer, t.units, mc, now);
     if (ins.changes !== 1) return null;
     db.prepare("UPDATE agent_keys SET key_credits_mc = key_credits_mc + ?, bought_total_mc = bought_total_mc + ? WHERE id = ?").run(mc, mc, t.agentId);
-    recordEvent(db, signer, { type: "credits_purchased", account_id: k.account_id as Acc, agent_id: t.agentId, payer: t.payer, tx_id: t.tx, amount_units: t.units, amount_mc: mc }, now);
+    recordEvent(db, signer, { type: "credits_purchased", account_id: k.account_id as Acc, agent_id: t.agentId, via, payer: t.payer, tx_id: t.tx, amount_units: t.units, amount_mc: mc }, now);
+    return { added: mc };
+  })();
+}
+
+/** Credit a wallet USDC transfer to an account's bought credits, once per NEAR transaction. null = replay. */
+export function creditAccountTopup(db: Db, cfg: RamxConfig, signer: Signer, t: { accountId: string; payer: string; tx: string; units: string }, now = Date.now()): { added: number } | null {
+  return db.transaction(() => {
+    const mc = topupMc(cfg, BigInt(t.units));
+    const ins = db.prepare("INSERT OR IGNORE INTO key_topups (tx_id, agent_id, via, account_id, payer, amount_units, amount_mc, ts) VALUES (?, NULL, 'wallet', ?, ?, ?, ?, ?)")
+      .run(t.tx, t.accountId, t.payer, t.units, mc, now);
+    if (ins.changes !== 1) return null;
+    db.prepare("UPDATE balances SET bought_mc = bought_mc + ? WHERE account_id = ?").run(mc, t.accountId);
+    recordEvent(db, signer, { type: "credits_purchased", account_id: t.accountId as Acc, agent_id: null, via: "wallet", payer: t.payer, tx_id: t.tx, amount_units: t.units, amount_mc: mc }, now);
     return { added: mc };
   })();
 }

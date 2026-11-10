@@ -7,7 +7,7 @@ import Database from "better-sqlite3";
  * base-unit decimal strings, times are Unix ms. No migrations (dev phase): when SCHEMA_VERSION
  * changes, delete the database file and restart.
  */
-export const SCHEMA_VERSION = 20;
+export const SCHEMA_VERSION = 21;
 
 export const TABLES = [
   "provider_pools", "provider_members", "provider_enrollments",
@@ -37,6 +37,9 @@ export const TABLES = [
   "availability_epochs",
   "agent_keys",
   "key_topups",
+  "near_nonces",
+  "tee_checks",
+  "swarm_commits", "swarm_reveals", "swarm_rounds", "swarm_slots",
 ] as const;
 
 const SCHEMA = `
@@ -60,8 +63,9 @@ CREATE TABLE IF NOT EXISTS provider_enrollments (
 );
 CREATE TABLE IF NOT EXISTS accounts (
   id               TEXT PRIMARY KEY,                 -- acc_…
-  world_nullifier  TEXT NOT NULL UNIQUE,             -- never leaves the gateway
-  payout_address   TEXT,                             -- lowercase EVM address
+  world_nullifier  TEXT NOT NULL UNIQUE,             -- never leaves the gateway; 'near:<account>' for a NEAR-wallet-only account
+  near_account     TEXT UNIQUE,                      -- NEAR wallet login (NEP-413)
+  payout_address   TEXT,                             -- NEAR account that receives epoch payouts
   created_at       INTEGER NOT NULL,
   credential       TEXT,                             -- §16.3: strongest World credential (orb / passport / selfie)
   banned_at        INTEGER,                          -- §16.3: nullifier banned from running nodes
@@ -71,6 +75,7 @@ CREATE TABLE IF NOT EXISTS balances (
   account_id          TEXT PRIMARY KEY REFERENCES accounts(id),
   starter_mc          INTEGER NOT NULL DEFAULT 0 CHECK (starter_mc >= 0),
   starter_expires_at  INTEGER,
+  bought_mc           INTEGER NOT NULL DEFAULT 0 CHECK (bought_mc >= 0),  -- USDC wallet top-ups; never expire
   earned_mc           INTEGER NOT NULL DEFAULT 0 CHECK (earned_mc >= 0),
   held_mc             INTEGER NOT NULL DEFAULT 0 CHECK (held_mc >= 0),
   earned_total_mc     INTEGER NOT NULL DEFAULT 0,
@@ -338,14 +343,46 @@ CREATE TABLE IF NOT EXISTS agent_keys (               -- §16.3 Agent Pass (MVP 
   created_at   INTEGER NOT NULL,
   revoked_at   INTEGER
 );
-CREATE TABLE IF NOT EXISTS key_topups (               -- x402 USDC → key credits; the USDC stays in the treasury
+CREATE TABLE IF NOT EXISTS key_topups (               -- USDC → key or account credits; the USDC stays in the treasury
   tx_id          TEXT PRIMARY KEY,                    -- NEAR tx: one top-up per payment, never twice
-  agent_id       TEXT NOT NULL REFERENCES agent_keys(id),
+  agent_id       TEXT REFERENCES agent_keys(id),      -- NULL = account credits (wallet top-up)
+  via            TEXT NOT NULL,                       -- x402 | escrow | wallet
   account_id     TEXT NOT NULL REFERENCES accounts(id),
   payer          TEXT NOT NULL,
   amount_units TEXT NOT NULL,
   amount_mc      INTEGER NOT NULL,
   ts             INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS tee_checks (               -- Phase 6.2: sampled answers judged in NEAR AI Cloud's TEE
+  req_id             TEXT PRIMARY KEY REFERENCES requests(req_id),
+  pool_id            TEXT NOT NULL,
+  status             TEXT NOT NULL CHECK (status IN ('queued', 'done', 'error')),
+  judge_model        TEXT, nonce TEXT, verdict TEXT, reason TEXT, chat_id TEXT,
+  signing_address    TEXT, attestation_sha256 TEXT,
+  signature_ok       INTEGER, hashes_match INTEGER,
+  error              TEXT,
+  created_at         INTEGER NOT NULL,
+  judged_at          INTEGER
+);
+CREATE TABLE IF NOT EXISTS swarm_commits (             -- Phase 7 capacity market (swarm-sim/RULES.md)
+  round_id INTEGER NOT NULL, agent TEXT NOT NULL, role TEXT NOT NULL CHECK (role IN ('buyer', 'seller')),
+  commit_hex TEXT NOT NULL, ts INTEGER NOT NULL, PRIMARY KEY (round_id, agent, role)
+);
+CREATE TABLE IF NOT EXISTS swarm_reveals (
+  round_id INTEGER NOT NULL, agent TEXT NOT NULL, role TEXT NOT NULL, model TEXT NOT NULL,
+  units INTEGER NOT NULL, price_mc INTEGER NOT NULL, salt TEXT NOT NULL, ts INTEGER NOT NULL,
+  PRIMARY KEY (round_id, agent, role)
+);
+CREATE TABLE IF NOT EXISTS swarm_rounds (
+  round_id INTEGER PRIMARY KEY, cleared_at INTEGER NOT NULL, commits_sha256 TEXT NOT NULL, orders TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS swarm_slots (                -- priority requests won in a round
+  id INTEGER PRIMARY KEY AUTOINCREMENT, agent TEXT NOT NULL, model TEXT NOT NULL,
+  units_left INTEGER NOT NULL, round_id INTEGER NOT NULL, expires_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS near_nonces (              -- NEP-413 login nonces: single use, short-lived
+  nonce       TEXT PRIMARY KEY,                       -- base64, 32 bytes
+  expires_at  INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS transcripts (
   req_id      TEXT PRIMARY KEY REFERENCES requests(req_id),

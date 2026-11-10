@@ -9,7 +9,7 @@ import type { FinalExecutionOutcome } from "@near-js/types";
  * (CLAUDE.md §5.7). Keys are `ed25519:<base58>` strings from the env; they never leave this process.
  */
 
-export const NEAR_TESTNET_RPC = "https://rpc.testnet.near.org";
+export const NEAR_TESTNET_RPC = "https://rpc.testnet.fastnear.com";
 /** 1 TGas = 10^12 gas. A plain function call fits in 30 TGas; batches and cross-contract calls use more. */
 export const TGAS = 1_000_000_000_000n;
 

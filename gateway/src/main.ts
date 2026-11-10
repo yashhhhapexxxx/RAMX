@@ -18,6 +18,8 @@ import { nearSettlementChain } from "./payout-near.ts";
 import { swarmStore } from "./swarm.ts";
 import { legalGate } from "./legal.ts";
 import { createX402, httpFacilitator, localNearFacilitator } from "./x402.ts";
+import { nearAiClient, sampleForJudge, startTeeJudge } from "./tee-judge.ts";
+import { startMarket } from "./market.ts";
 import { maybeQueueVerification, startCanaryWorker, startVerificationWorker } from "./verification.ts";
 
 let cfg: Config;
@@ -107,8 +109,14 @@ if (verificationOn && e.VERIFIER_URL && e.VERIFIER_OWNER_ACCOUNT) {
   console.warn(verificationOn ? "output verification disabled: configure a trusted VERIFIER_URL and VERIFIER_OWNER_ACCOUNT" : "output verification disabled (VERIFICATION_ENABLED=false; planned feature)");
 }
 
+const stopMarket = startMarket(db, cfg, signer);
+// Phase 6.2: TEE spot-check of a sample of answers (NEAR AI Cloud).
+const teeRate = e.TEE_JUDGE_RATE ?? 0.1;
+const stopTee = e.NEARAI_API_KEY ? startTeeJudge(db, cfg, signer, nearAiClient(e.NEARAI_API_KEY), e.TEE_JUDGE_MODEL) : () => {};
+if (!e.NEARAI_API_KEY) console.warn("TEE spot-check off (NEARAI_API_KEY not set)");
 const app = createApp({ cfg, db, signer, x402, router, queue, directory, onComplete: (completion) => {
   logCompletion(completion);
+  if (e.NEARAI_API_KEY && sampleForJudge(db, completion, teeRate)) console.log(JSON.stringify({ msg: "tee_check_queued", req_id: completion.reqId }));
   if (completion.ok && verificationOn) {
     const id = maybeQueueVerification(db, cfg, completion.reqId);
     if (id) console.log(JSON.stringify({ msg: "verification_queued", verification_id: id, req_id: completion.reqId }));
@@ -129,6 +137,8 @@ const shutdown = () => {
   stopVerification();
   stopCanaries();
   stopLedger();
+  stopTee();
+  stopMarket();
   server.close();
   db.close();
   process.exit(0);

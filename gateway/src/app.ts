@@ -14,14 +14,18 @@ import { heartbeatHandler, registerHandler } from "./nodes.ts";
 import { poolState } from "./route.ts";
 import { rpSignatureHandler, verifyHandler, type WorldFetch } from "./world.ts";
 import type { X402 } from "./x402.ts";
+import { ChainCheckError, escrowPayment, rpcTxLookup, walletTransfer, type NearTxLookup } from "./chain-credits.ts";
+import { nearNonceHandler, nearVerifyHandler, rpcKeyLookup, type NearKeyLookup } from "./near-auth.ts";
+import { teeCheckOf } from "./tee-judge.ts";
+import { marketRoutes } from "./market.ts";
 import { payoutsFor } from "./settlement.ts";
 import { createPoolQueue, type PoolQueue } from "./queue.ts";
 import { createRouter, type Directory, type Router } from "./router.ts";
 import { gatewayDirectory } from "./directory.ts";
 import { createStallTracker } from "./stall.ts";
 import { HASH_SALT_HEADER } from "./privacy.ts";
-import { AgentKeyCreateRequest, AgentKeyCreateResponse, AgentKeyListResponse, AgentRequestsResponse, CollusionFlagsResponse, CreditTopupRequest, CreditTopupResponse, KeyCreditsResponse } from "@ramx/shared";
-import { agentFromToken, agentRequests, collusionFlags, createAgentKey, creditTopup, isBanned, keyCredits, listAgentKeys, revokeAgentKey } from "./incentives.ts";
+import { AgentKeyCreateRequest, AgentKeyCreateResponse, AgentKeyListResponse, AgentRequestsResponse, CollusionFlagsResponse, CreditTopupRequest, CreditTopupResponse, EscrowCreditRequest, KeyCreditsResponse, NearTopupRequest, NearTopupResponse } from "@ramx/shared";
+import { agentFromToken, agentRequests, collusionFlags, createAgentKey, creditAccountTopup, creditTopup, isBanned, keyCredits, listAgentKeys, revokeAgentKey } from "./incentives.ts";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import { PoolPlanResponse } from "@ramx/shared";
 import { poolPlan } from "./formation.ts";
@@ -44,6 +48,9 @@ export type Deps = {
   /** Observer, runs after billing for every completion. */
   onComplete?: OnComplete;
   providerRelay?: ProviderRelay;
+  /** NEAR RPC lookups (tests inject fakes). Default: the configured RPC. */
+  nearTx?: NearTxLookup;
+  nearKeys?: NearKeyLookup;
 };
 
 export const newReqId = (): string => `req_${Date.now().toString(36)}${randomBytes(8).toString("hex")}`;
@@ -56,7 +63,7 @@ type RequestRow = {
   cost_mc: number | null; split: string | null; route: string | null; prompt_hash: string; resp_hash: string | null; ledger_seq: number | null; ledger_tx: string | null; attempts: string | null; route_source: "heartbeat" | "scheduler" | null; privacy: "trusted-ends" | "trusted-all" | null; ts: number;
 };
 
-export function createApp({ cfg, db, signer, x402 = null, worldFetch, directory, router: injectedRouter, queue: injectedQueue, onComplete = logCompletion, providerRelay = new ProviderRelay() }: Deps): Hono<AppEnv> {
+export function createApp({ cfg, db, signer, x402 = null, worldFetch, directory, router: injectedRouter, queue: injectedQueue, onComplete = logCompletion, providerRelay = new ProviderRelay(), nearTx, nearKeys }: Deps): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   const secret = cfg.env.JWT_SECRET;
   const queue = injectedQueue ?? createPoolQueue(cfg.net.router.max_concurrent_per_pool);
@@ -90,6 +97,14 @@ export function createApp({ cfg, db, signer, x402 = null, worldFetch, directory,
 
   app.post("/auth/world/rp-signature", rpSignatureHandler(cfg));
   app.post("/auth/world/verify", verifyHandler(db, cfg, signer, worldFetch));
+  app.post("/auth/near/nonce", nearNonceHandler(db));
+  // Phase 7 capacity market (swarm-sim/RULES.md).
+  const market = marketRoutes(db, cfg, nearKeys ?? rpcKeyLookup(cfg.env.NEAR_RPC_URL));
+  app.post("/swarm/commit", market.commit);
+  app.post("/swarm/reveal", market.reveal);
+  app.get("/swarm/rounds", market.rounds);
+  app.get("/swarm/rounds/:id", market.round);
+  app.post("/auth/near/verify", nearVerifyHandler(db, cfg, signer, nearKeys ?? rpcKeyLookup(cfg.env.NEAR_RPC_URL)));
 
   app.get("/me", session(secret, true), (c) => {
     const body = me(db, cfg, c.get("accountId")!);
@@ -130,6 +145,55 @@ export function createApp({ cfg, db, signer, x402 = null, worldFetch, directory,
     if (!credited) return errorResponse(c, 400, "bad_request", `payment ${paid.tx} was already credited`);
     for (const [k, v] of Object.entries(paid.headers)) c.header(k, v);
     return c.json(CreditTopupResponse.parse({ agent_id: agentId, payer: paid.payer, tx_id: paid.tx, amount_units: units, added_mc: credited.added, credits: keyCredits(db, cfg.net, agentId) }));
+  });
+  // Guarded agent: it paid the treasury through the escrow contract (memo = this key's id).
+  const txLookup = nearTx ?? rpcTxLookup(cfg.env.NEAR_RPC_URL);
+  const lookupTx = async (hash: string, sender: string) => {
+    try {
+      return await txLookup(hash, sender);
+    } catch (e) {
+      throw new ChainCheckError(`transaction ${hash} from ${sender} not found on NEAR: ${(e as Error).message}`);
+    }
+  };
+  app.post("/v1/credits/escrow", keyOnly, async (c) => {
+    const agentId = c.get("agentId");
+    if (!agentId) return errorResponse(c, 403, "unauthorized", "use an API key: Authorization: Bearer gpa_…");
+    if (isBanned(db, c.get("accountId")!)) return errorResponse(c, 403, "unauthorized", "this account is banned");
+    const { ESCROW_CONTRACT_ID: escrow, X402_PAY_TO: treasury } = cfg.env;
+    if (!escrow || !treasury) return errorResponse(c, 400, "bad_request", "escrow is not configured on this gateway (ESCROW_CONTRACT_ID, X402_PAY_TO)");
+    const body = EscrowCreditRequest.safeParse(await c.req.json().catch(() => undefined));
+    if (!body.success) return errorResponse(c, 400, "bad_request", body.error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; "));
+    let units: string;
+    try {
+      units = escrowPayment(await lookupTx(body.data.tx_hash, body.data.agent_account), { escrow, agent: body.data.agent_account, payee: treasury, memo: agentId });
+    } catch (e) {
+      if (e instanceof ChainCheckError) return errorResponse(c, 400, "bad_request", e.message);
+      throw e;
+    }
+    const credited = creditTopup(db, cfg.net, signer, { agentId, payer: body.data.agent_account, tx: body.data.tx_hash, units, via: "escrow" });
+    console.log(JSON.stringify({ msg: "escrow_credit", agentId, payer: body.data.agent_account, tx: body.data.tx_hash, units, added_mc: credited?.added ?? 0 }));
+    if (!credited) return errorResponse(c, 400, "bad_request", `payment ${body.data.tx_hash} was already credited`);
+    return c.json(CreditTopupResponse.parse({ agent_id: agentId, payer: body.data.agent_account, tx_id: body.data.tx_hash, amount_units: units, added_mc: credited.added, credits: keyCredits(db, cfg.net, agentId) }));
+  });
+  // Human top-up: USDC ft_transfer from a NEAR wallet to the treasury (memo = account id) → account credits.
+  app.post("/v1/credits/near-topup", session(secret, true), async (c) => {
+    const accountId = c.get("accountId")!;
+    if (isBanned(db, accountId)) return errorResponse(c, 403, "unauthorized", "this account is banned");
+    const treasury = cfg.env.X402_PAY_TO;
+    if (!treasury) return errorResponse(c, 400, "bad_request", "no treasury configured on this gateway (X402_PAY_TO)");
+    const body = NearTopupRequest.safeParse(await c.req.json().catch(() => undefined));
+    if (!body.success) return errorResponse(c, 400, "bad_request", body.error.issues.map((i) => `${i.path.join(".") || "body"}: ${i.message}`).join("; "));
+    let units: string;
+    try {
+      units = walletTransfer(await lookupTx(body.data.tx_hash, body.data.sender), { usdc: cfg.net.x402_near.asset, sender: body.data.sender, treasury, memo: accountId });
+    } catch (e) {
+      if (e instanceof ChainCheckError) return errorResponse(c, 400, "bad_request", e.message);
+      throw e;
+    }
+    const credited = creditAccountTopup(db, cfg.net, signer, { accountId, payer: body.data.sender, tx: body.data.tx_hash, units });
+    console.log(JSON.stringify({ msg: "wallet_topup", accountId, payer: body.data.sender, tx: body.data.tx_hash, units, added_mc: credited?.added ?? 0 }));
+    if (!credited) return errorResponse(c, 400, "bad_request", `payment ${body.data.tx_hash} was already credited`);
+    return c.json(NearTopupResponse.parse({ account_id: accountId, payer: body.data.sender, tx_id: body.data.tx_hash, amount_units: units, added_mc: credited.added }));
   });
   app.get("/agents", session(secret, true), (c) => c.json(AgentKeyListResponse.parse({ agents: listAgentKeys(db, c.get("accountId")!) })));
   app.get("/agents/:id/requests", session(secret, true), (c) => {
@@ -218,6 +282,7 @@ export function createApp({ cfg, db, signer, x402 = null, worldFetch, directory,
       split: r.split ? JSON.parse(r.split) : null,
       route: r.route ? JSON.parse(r.route) : null,
       attempts: r.attempts ? JSON.parse(r.attempts) : null,
+      tee_check: teeCheckOf(db, id.data),
     };
     return c.json(Receipt.parse(receipt));
   });

@@ -38,6 +38,19 @@ export function estimateInputTokens(messages: ChatMessage[], tools: Tool[] = [])
   return Math.ceil(chars / 4);
 }
 
+/**
+ * Output counting (Phase 6.1): a pool reports `usage.completion_tokens`, which it could inflate. The
+ * gateway saw the answer itself: content chunks in a stream (≈ one per token) and the text (≈ 3
+ * chars per token, a generous estimate so honest pools are not cut). Billed output =
+ * min(reported, observed + OUTPUT_MARGIN). Reporting more than 10% above that is an over-count:
+ * the request is still served, but it counts as a reliability failure for the pool.
+ */
+export const OUTPUT_MARGIN = 8;
+export const observedOutputTokens = (text: string, streamedChunks = 0): number => Math.max(streamedChunks, Math.ceil(text.length / 3));
+export function countedOutput(reported: number, observed: number): { billed: number; overcount: boolean } {
+  return { billed: Math.min(reported, observed + OUTPUT_MARGIN), overcount: reported > Math.ceil(observed * 1.1) + OUTPUT_MARGIN };
+}
+
 /** Hold (SPEC §5.3 step 4) = the cost formula with max_tokens output and the estimated input. */
 export function holdMc(cfg: RamxConfig, model: ModelConfig, maxTokens: number, estInputTokens: number, multiplier = 1): number {
   return costMc(cfg, model, estInputTokens, maxTokens, multiplier);
@@ -75,15 +88,15 @@ export function splitCost(
   return { nodes, burn_mc: burn, reserve_mc: cost - paid - burn };
 }
 
-type BalanceRow = { starter_mc: number; starter_expires_at: number | null; earned_mc: number; held_mc: number };
+type BalanceRow = { starter_mc: number; starter_expires_at: number | null; bought_mc: number; earned_mc: number; held_mc: number };
 
 const starterValid = (b: BalanceRow, now: number): number => (b.starter_expires_at !== null && b.starter_expires_at > now ? b.starter_mc : 0);
 
-/** Spendable now = valid starter + earned − held. */
+/** Spendable now = valid starter + bought + earned − held. */
 export function availableMc(db: Db, accountId: string, now = Date.now()): number {
-  const b = db.prepare("SELECT starter_mc, starter_expires_at, earned_mc, held_mc FROM balances WHERE account_id = ?").get(accountId) as BalanceRow | undefined;
+  const b = db.prepare("SELECT starter_mc, starter_expires_at, bought_mc, earned_mc, held_mc FROM balances WHERE account_id = ?").get(accountId) as BalanceRow | undefined;
   if (!b) return 0;
-  return starterValid(b, now) + b.earned_mc - b.held_mc;
+  return starterValid(b, now) + b.bought_mc + b.earned_mc - b.held_mc;
 }
 
 /**
@@ -95,7 +108,7 @@ export function tryHold(db: Db, accountId: string, amount: number, now = Date.no
     .prepare(
       `UPDATE balances SET held_mc = held_mc + @amount
        WHERE account_id = @id
-         AND (CASE WHEN starter_expires_at > @now THEN starter_mc ELSE 0 END) + earned_mc - held_mc >= @amount`,
+         AND (CASE WHEN starter_expires_at > @now THEN starter_mc ELSE 0 END) + bought_mc + earned_mc - held_mc >= @amount`,
     )
     .run({ id: accountId, amount, now });
   return r.changes === 1;
@@ -158,13 +171,13 @@ export type SettleResult = { cost: number; split: CreditSplit; fromKey: number }
  * Settle a successful credit request in ONE transaction:
  * - cost = costMc(usage), capped at the hold (the hold used an input estimate; we never charge
  *   more than we held) and at what the account still has (starter may expire during a request);
- * - release the hold; spend starter first (if not expired), then earned; spent_total += cost;
+ * - release the hold; spend starter first (if not expired), then bought, then earned; spent_total += cost;
  * - credit each node owner's earned / earned_total with its split share;
  * - update the requests row; insert the request_settled ledger event.
  */
 export function settle(db: Db, cfg: RamxConfig, signer: Signer, s: SettleInput, now = Date.now()): SettleResult {
   return db.transaction((): SettleResult => {
-    const b = db.prepare("SELECT starter_mc, starter_expires_at, earned_mc, held_mc FROM balances WHERE account_id = ?").get(s.accountId) as BalanceRow;
+    const b = db.prepare("SELECT starter_mc, starter_expires_at, bought_mc, earned_mc, held_mc FROM balances WHERE account_id = ?").get(s.accountId) as BalanceRow;
     const raw = costMc(cfg, s.model, s.inTokens, s.outTokens, s.priceMultiplier ?? 1);
     const starter = starterValid(b, now);
     const keyHeld = s.key?.held ?? 0;
@@ -172,18 +185,19 @@ export function settle(db: Db, cfg: RamxConfig, signer: Signer, s: SettleInput, 
     const capped = Math.min(raw, s.hold);
     const fromKey = Math.min(capped, keyHeld);
     let fromAccount = capped - fromKey;
-    if (fromAccount > starter + b.earned_mc) {
-      console.warn(`settle ${s.reqId}: cost ${fromAccount} mc > balance ${starter + b.earned_mc} mc (starter expired during the request?); charging the balance`);
-      fromAccount = starter + b.earned_mc;
+    if (fromAccount > starter + b.bought_mc + b.earned_mc) {
+      console.warn(`settle ${s.reqId}: cost ${fromAccount} mc > balance ${starter + b.bought_mc + b.earned_mc} mc (starter expired during the request?); charging the balance`);
+      fromAccount = starter + b.bought_mc + b.earned_mc;
     }
     const cost = fromKey + fromAccount;
     if (raw > s.hold) console.warn(`settle ${s.reqId}: actual cost ${raw} mc > hold ${s.hold} mc (input estimate too low); charged the hold`);
     const fromStarter = Math.min(starter, fromAccount);
-    const fromEarned = fromAccount - fromStarter;
+    const fromBought = Math.min(b.bought_mc, fromAccount - fromStarter);
+    const fromEarned = fromAccount - fromStarter - fromBought;
     db.prepare(
-      `UPDATE balances SET held_mc = MAX(held_mc - @hold, 0), starter_mc = starter_mc - @fs, earned_mc = earned_mc - @fe,
+      `UPDATE balances SET held_mc = MAX(held_mc - @hold, 0), starter_mc = starter_mc - @fs, bought_mc = bought_mc - @fb, earned_mc = earned_mc - @fe,
          spent_total_mc = spent_total_mc + @cost WHERE account_id = @id`,
-    ).run({ hold: s.hold - keyHeld, fs: fromStarter, fe: fromEarned, cost: fromAccount, id: s.accountId });
+    ).run({ hold: s.hold - keyHeld, fs: fromStarter, fb: fromBought, fe: fromEarned, cost: fromAccount, id: s.accountId });
     if (s.key) {
       db.prepare(`UPDATE agent_keys SET key_held_mc = MAX(key_held_mc - @held, 0), key_credits_mc = key_credits_mc - @k,
          key_spent_mc = key_spent_mc + @k WHERE id = @id`).run({ held: keyHeld, k: fromKey, id: s.key.agentId });

@@ -33,10 +33,10 @@ for (const run of [1,2]) test(`MVP backend demo local run ${run}: identity → t
     const usage = { prompt_tokens: 40, completion_tokens: 100, total_tokens: 140 };
     if (body.stream) {
       res.writeHead(200, { 'content-type': 'text/event-stream' });
-      res.end(`data: ${JSON.stringify({ choices: [{ delta: { content: 'Hello from the test pool' } }] })}\n\ndata: ${JSON.stringify({ choices: [], usage })}\n\ndata: [DONE]\n\n`);
+      res.end(`data: ${JSON.stringify({ choices: [{ delta: { content: 'Hello from the test pool. '.repeat(13) } }] })}\n\ndata: ${JSON.stringify({ choices: [], usage })}\n\ndata: [DONE]\n\n`);
     } else {
       res.setHeader('content-type','application/json');
-      res.end(JSON.stringify({ id: 'test-pool', object: 'chat.completion', created: Math.floor(Date.now()/1000), model: MODEL, choices: [{ index: 0, message: { role: 'assistant', content: 'Hello from the test pool' }, finish_reason: 'stop' }], usage }));
+      res.end(JSON.stringify({ id: 'test-pool', object: 'chat.completion', created: Math.floor(Date.now()/1000), model: MODEL, choices: [{ index: 0, message: { role: 'assistant', content: 'Hello from the test pool. '.repeat(13) }, finish_reason: 'stop' }], usage }));
     }
   });
   const facilitator = createServer(async (req, res) => {
