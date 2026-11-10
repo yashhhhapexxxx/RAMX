@@ -1,0 +1,14 @@
+[package]
+name = "ramx-ledger"
+version = "0.1.0"
+edition = "2021"
+description = "RAMX audit ledger: the gateway appends signed balance-change events (NEP-297 logs)"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "5.30"
+
+[dev-dependencies]
+near-sdk = { version = "5.30", features = ["unit-testing"] }
