@@ -17,6 +17,7 @@ import type { X402 } from "./x402.ts";
 import { ChainCheckError, escrowPayment, rpcTxLookup, walletTransfer, type NearTxLookup } from "./chain-credits.ts";
 import { nearNonceHandler, nearVerifyHandler, rpcKeyLookup, type NearKeyLookup } from "./near-auth.ts";
 import { teeCheckOf } from "./tee-judge.ts";
+import { nearAiFetch, teeAttestationOf } from "./nearai-upstream.ts";
 import { marketRoutes } from "./market.ts";
 import { payoutsFor } from "./settlement.ts";
 import { createPoolQueue, type PoolQueue } from "./queue.ts";
@@ -59,7 +60,7 @@ export type AppEnv = { Variables: { reqId: string; accountId: string | null; age
 type RequestRow = {
   req_id: string; model: string; pay_type: "credits" | "x402"; status: "pending" | "ok" | "failed"; account_id: string | null;
   x402_payer: string | null; x402_tx: string | null; x402_amount: string | null; x402_asset: string | null; in_tokens: number | null; out_tokens: number | null;
-  cost_mc: number | null; split: string | null; route: string | null; prompt_hash: string; resp_hash: string | null; ledger_seq: number | null; ledger_tx: string | null; attempts: string | null; route_source: "heartbeat" | "scheduler" | null; privacy: "trusted-ends" | "trusted-all" | null; ts: number;
+  cost_mc: number | null; split: string | null; route: string | null; prompt_hash: string; resp_hash: string | null; ledger_seq: number | null; ledger_tx: string | null; attempts: string | null; route_source: "heartbeat" | "scheduler" | null; privacy: "trusted-ends" | "trusted-all" | "tee" | null; backend: "pool" | "near-ai-cloud" | null; ts: number;
 };
 
 export function createApp({ cfg, db, signer, x402 = null, worldFetch, directory, router: injectedRouter, queue: injectedQueue, onComplete = logCompletion, providerRelay = new ProviderRelay(), nearTx, nearKeys }: Deps): Hono<AppEnv> {
@@ -85,11 +86,11 @@ export function createApp({ cfg, db, signer, x402 = null, worldFetch, directory,
   app.get("/healthz", (c) => c.json({ ok: true as const }));
 
   // Session if an Authorization header is present (invalid → 401), else x402 (SPEC §5.3 step 2).
-  app.post("/v1/chat/completions", session(secret, false, (t) => agentFromToken(db, t)), chatHandler(cfg, makePrepare({ cfg, db, signer, x402, router, queue, observe: onComplete }), stall, (url, init) => {
+  app.post("/v1/chat/completions", session(secret, false, (t) => agentFromToken(db, t)), chatHandler(cfg, makePrepare({ cfg, db, signer, x402, router, queue, observe: onComplete }), stall, nearAiFetch(cfg, (url, init) => {
     if (url.protocol !== "provider:") return fetch(url, init);
     if (!providerAvailable(db, url.hostname)) return Promise.reject(new Error("Provider coordinator is offline"));
     return providerRelay.forward(url.hostname, "/v1/chat/completions", JSON.parse(String(init.body)), init.signal ?? undefined);
-  }, (m) => router.contextLength(m)));
+  }), (m) => router.contextLength(m)));
   app.route("/provider", providerRoutes(db, cfg, signer, providerRelay, dir));
 
   app.post("/auth/world/rp-signature", rpSignatureHandler(cfg));
@@ -280,6 +281,7 @@ export function createApp({ cfg, db, signer, x402 = null, worldFetch, directory,
       route: r.route ? JSON.parse(r.route) : null,
       attempts: r.attempts ? JSON.parse(r.attempts) : null,
       tee_check: teeCheckOf(db, id.data),
+      tee_attestation: teeAttestationOf(db, id.data),
     };
     return c.json(Receipt.parse(receipt));
   });

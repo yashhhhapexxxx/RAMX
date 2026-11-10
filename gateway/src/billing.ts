@@ -17,6 +17,7 @@ import type { PoolQueue } from "./queue.ts";
 import type { Router, SelectedPool, SelectOptions } from "./router.ts";
 import { HASH_SALT_HEADER, isPrivacyMode, newSalt, PRIVACY_HEADER, PRIVACY_MODES, promptHashOf, saltedHash, seal, trustedAccounts } from "./privacy.ts";
 import type { X402 } from "./x402.ts";
+import { NEARAI_POOL_ID } from "./nearai-upstream.ts";
 
 /**
  * Billing for /v1/chat/completions (SPEC §5.3, §7):
@@ -224,9 +225,10 @@ export function makePrepare(d: BillingDeps): Prepare {
       const resolveRoute = (): Route | null => {
         const exact = cfg.env.PARALLAX_ROUTE_LOG ? exactRoute(db, cfg, reqId, model) : null;
         if (exact) cur.route = exact;
-        db.prepare("UPDATE requests SET route = ?, route_source = ?, payout_snapshot = coalesce(?, payout_snapshot) WHERE req_id = ?").run(
-          cur.route ? JSON.stringify(cur.route) : null, exact ? "scheduler" : "heartbeat",
-          exact && payType === "x402" ? JSON.stringify(payoutSnapshot(db, exact)) : null, reqId);
+        const nearAi = cur.poolId === NEARAI_POOL_ID;
+        db.prepare("UPDATE requests SET route = ?, route_source = ?, payout_snapshot = coalesce(?, payout_snapshot), backend = ? WHERE req_id = ?").run(
+          cur.route ? JSON.stringify(cur.route) : null, nearAi ? null : exact ? "scheduler" : "heartbeat",
+          exact && payType === "x402" ? JSON.stringify(payoutSnapshot(db, exact)) : null, nearAi ? "near-ai-cloud" : "pool", reqId);
         return cur.route;
       };
       /** Billed output tokens (Phase 6.1); an over-count is logged and costs the pool reliability. */

@@ -12,6 +12,7 @@ import { poolReliability } from "./reliability.ts";
 import { coordinatorFor, coordinatorMap, urlHash as hashUrl } from "./formation.ts";
 import type { PrivacyMode } from "./privacy.ts";
 import { providerCoordinator, providerAvailable } from "./provider-state.ts";
+import { NEARAI_POOL_ID, nearAiFallbackOn, nearAiPool } from "./nearai-upstream.ts";
 
 /** Read-only directory boundary (gatewayDirectory in directory.ts); tests inject their own. */
 export type Directory = {
@@ -152,9 +153,16 @@ export function createRouter(cfg: Config, db: Db, directory: Directory, queue?: 
       contexts.set(model.model_id, { value, at: Date.now() });
       return value;
     },
-    /** Best ready pool; `poolId` = only that pool; `exclude` = any pool but that one (P5.2 failover). */
+    /**
+     * Best ready pool; `poolId` = only that pool; `exclude` = any pool but that one (P5.2 failover).
+     * Judge mode: privacy "tee" always, and any request with no ready pool, go to NEAR AI Cloud
+     * (when NEARAI_API_KEY is set and NEARAI_FALLBACK is not "false").
+     */
     async select(model: ModelConfig, poolId?: string, exclude?: string, opts: SelectOptions = {}): Promise<SelectedPool | null> {
-      const selected = (await candidates(model, opts)).find((p) => (!poolId || p.poolId === poolId) && p.poolId !== exclude) ?? null;
+      const fallback = nearAiFallbackOn(cfg) && exclude !== NEARAI_POOL_ID && (!poolId || poolId === NEARAI_POOL_ID) ? nearAiPool(cfg) : null;
+      if (opts.privacy?.mode === "tee" || poolId === NEARAI_POOL_ID) return fallback;
+      const selected = (await candidates(model, opts)).find((p) => (!poolId || p.poolId === poolId) && p.poolId !== exclude) ?? (opts.pin ? null : fallback);
+      if (selected?.poolId === NEARAI_POOL_ID) return selected;
       if (selected && !selected.route) console.warn(`route unknown for ${model.model_id} in ${selected.poolId}: no valid heartbeat layer map; node shares go to reserve`);
       return selected;
     },
@@ -192,7 +200,12 @@ export function createRouter(cfg: Config, db: Db, directory: Directory, queue?: 
         if (!model || seen.has(model.model_id)) continue;
         seen.add(model.model_id);
         const pools = await candidates(model);
-        if (!pools.length) continue;
+        if (!pools.length) {
+          // Judge mode: no laptop pool is ready, NEAR AI Cloud serves the model.
+          if (nearAiFallbackOn(cfg)) data.push({ id: model.model_id, object: "model", created: 0, owned_by: "ramx",
+            model_factor: model.model_factor, pools: 0, source: "near-ai-cloud", price: pricing.quote(model) });
+          continue;
+        }
         data.push({ id: model.model_id, object: "model", created: 0, owned_by: "ramx",
           model_factor: model.model_factor, pools: pools.length, source: "gateway",
           context_length: minContext(pools),
