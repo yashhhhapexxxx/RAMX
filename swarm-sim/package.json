@@ -1,0 +1,21 @@
+{
+  "name": "@ramx/swarm-sim",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/sim.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@near-js/crypto": "2.5.1",
+    "@ramx/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2"
+  }
+}
