@@ -1,0 +1,137 @@
+import { serve } from "@hono/node-server";
+import { createServer as createHttpsServer } from "node:https";
+import { tlsOptions } from "./privacy.ts";
+import { loadConfig, type Config } from "./config.ts";
+import { openDb } from "./db.ts";
+import { createApp } from "./app.ts";
+import { createPoolQueue } from "./queue.ts";
+import { createRouter } from "./router.ts";
+import { gatewayDirectory } from "./directory.ts";
+import { logCompletion } from "./chat.ts";
+import { signerFromSeed } from "./events.ts";
+import { nearLedgerChain, startLedgerWriter } from "./ledger-chain.ts";
+import { expireStarterCredits } from "./ledger.ts";
+import { refreshReliability } from "./reliability.ts";
+import { expireEarned, payAvailability, runPenalties, unlockDue } from "./incentives.ts";
+import { createSettlement, startSettlementWorker } from "./settlement.ts";
+import { nearSettlementChain } from "./payout-near.ts";
+import { swarmStore } from "./swarm.ts";
+import { legalGate } from "./legal.ts";
+import { createX402, httpFacilitator, localNearFacilitator } from "./x402.ts";
+import { maybeQueueVerification, startCanaryWorker, startVerificationWorker } from "./verification.ts";
+
+let cfg: Config;
+let signer;
+try {
+  cfg = loadConfig();
+  if (!cfg.env.GATEWAY_SIGNING_KEY) throw new Error("GATEWAY_SIGNING_KEY is required (signs ledger events)");
+  signer = signerFromSeed(cfg.env.GATEWAY_SIGNING_KEY);
+} catch (e) {
+  console.error((e as Error).message);
+  process.exit(1);
+}
+const e = cfg.env;
+legalGate(cfg);
+const db = openDb(e.DATABASE_PATH, { resetOnMismatch: e.DB_RESET_ON_MISMATCH === "true" });
+
+// x402 on NEAR: an in-process facilitator with our relayer account (default), or a remote facilitator URL.
+const facilitator = e.X402_RELAYER_ID && e.X402_RELAYER_KEY
+  ? localNearFacilitator({ network: cfg.net.x402_near.network, relayerId: e.X402_RELAYER_ID, relayerKey: e.X402_RELAYER_KEY, rpcUrl: e.NEAR_RPC_URL })
+  : e.X402_FACILITATOR_URL ? httpFacilitator(e.X402_FACILITATOR_URL) : null;
+const x402 = facilitator && e.X402_PAY_TO ? createX402({ cfg: cfg.net, facilitator, payTo: e.X402_PAY_TO }) : null;
+if (!x402) console.warn("x402 not configured (X402_PAY_TO + X402_RELAYER_ID/X402_RELAYER_KEY or X402_FACILITATOR_URL): requests without a session get 402");
+
+// NEAR ledger writer: async, never blocks a request (CLAUDE.md §4.9). Without the gateway NEAR account, events stay unsent in SQLite.
+let stopLedger = () => {};
+if (e.LEDGER_CONTRACT_ID && e.NEAR_GATEWAY_ACCOUNT_ID && e.NEAR_GATEWAY_KEY) {
+  stopLedger = startLedgerWriter(db, nearLedgerChain({ contractId: e.LEDGER_CONTRACT_ID, writerId: e.NEAR_GATEWAY_ACCOUNT_ID, writerKey: e.NEAR_GATEWAY_KEY, rpcUrl: e.NEAR_RPC_URL }));
+} else {
+  console.warn("NEAR ledger not configured (LEDGER_CONTRACT_ID / NEAR_GATEWAY_ACCOUNT_ID / NEAR_GATEWAY_KEY): ledger events stay in SQLite only");
+}
+
+// Starter credit expiry (SPEC §8.2), once a minute.
+const expiry = setInterval(() => {
+  try {
+    const n = expireStarterCredits(db, signer);
+    if (n > 0) console.log(JSON.stringify({ msg: "starter_expired", accounts: n }));
+  } catch (err) {
+    console.error(`starter expiry failed: ${(err as Error).message}`);
+  }
+}, 60_000);
+
+/** SPEC §16.2 verification is a planned feature; off unless VERIFICATION_ENABLED=true. */
+const verificationOn = cfg.env.VERIFICATION_ENABLED === "true";
+
+// SPEC §16.3 incentives: unlock vested credits, expire old earnings, act on final fraud verdicts,
+// pay standby rewards for the last epoch. Local SQLite + ledger events (async writer); once a minute.
+const incentiveTick = () => {
+  try {
+    unlockDue(db);
+    expireEarned(db, cfg.net, signer);
+    if (verificationOn) runPenalties(db, cfg.net, signer); // penalties need verification verdicts
+    const paid = payAvailability(db, cfg, signer);
+    if (paid > 0) console.log(JSON.stringify({ msg: "availability_paid", mc: paid }));
+  } catch (err) {
+    console.error(`incentives tick failed: ${(err as Error).message}`);
+  }
+};
+incentiveTick();
+const incentivesTimer = setInterval(incentiveTick, 60_000);
+
+refreshReliability(db, cfg);
+const reliabilityTimer = setInterval(() => {
+  try { refreshReliability(db, cfg); }
+  catch (err) { console.error(`reliability refresh failed: ${(err as Error).message}`); }
+}, cfg.env.HEARTBEAT_SECONDS * 1000);
+
+let stopSettlement = () => {};
+if (e.PAYOUT_CONTRACT_ID) {
+  if (!e.LEDGER_CONTRACT_ID || !e.NEAR_GATEWAY_ACCOUNT_ID || !e.NEAR_GATEWAY_KEY) throw new Error("epoch settlement requires the NEAR ledger writer configuration");
+  const chain = nearSettlementChain(cfg);
+  const store = swarmStore(cfg);
+  if (store) console.log("Swarm bundles on: each closed epoch is uploaded to Bee before it is committed to the ledger");
+  stopSettlement = startSettlementWorker(createSettlement(db, cfg, signer, chain, store));
+} else {
+  console.warn("epoch settlement disabled: set PAYOUT_CONTRACT_ID, SETTLER_ACCOUNT_ID and SETTLER_KEY to enable");
+}
+
+const directory = gatewayDirectory(cfg, db);
+const router = createRouter(cfg, db, directory);
+const queue = createPoolQueue(cfg.net.router.max_concurrent_per_pool);
+let stopVerification = () => {};
+let stopCanaries = () => {};
+if (verificationOn && e.VERIFIER_URL && e.VERIFIER_OWNER_ACCOUNT) {
+  stopVerification = startVerificationWorker(db, cfg, signer);
+  stopCanaries = startCanaryWorker(db, cfg, signer, router, queue);
+} else {
+  console.warn(verificationOn ? "output verification disabled: configure a trusted VERIFIER_URL and VERIFIER_OWNER_ACCOUNT" : "output verification disabled (VERIFICATION_ENABLED=false; planned feature)");
+}
+
+const app = createApp({ cfg, db, signer, x402, router, queue, directory, onComplete: (completion) => {
+  logCompletion(completion);
+  if (completion.ok && verificationOn) {
+    const id = maybeQueueVerification(db, cfg, completion.reqId);
+    if (id) console.log(JSON.stringify({ msg: "verification_queued", verification_id: id, req_id: completion.reqId }));
+  }
+} });
+// Privacy: HTTPS when TLS_CERT_FILE + TLS_KEY_FILE are set (src/privacy.ts); else HTTP (MVP).
+let tls: ReturnType<typeof tlsOptions> = null;
+try { tls = tlsOptions(cfg); } catch (err) { console.error((err as Error).message); process.exit(1); }
+const server = serve({ fetch: app.fetch, port: e.PORT, hostname: e.HOST, ...(tls ? { createServer: createHttpsServer, serverOptions: tls } : {}) }, (info) => {
+  console.log(`gateway listening on ${tls ? "https" : "http"}://${info.address}:${info.port} → pool ${e.POOL_COORDINATOR_URL}; gateway pubkey ${signer.publicKeyHex}`);
+});
+
+const shutdown = () => {
+  clearInterval(expiry);
+  clearInterval(reliabilityTimer);
+  clearInterval(incentivesTimer);
+  stopSettlement();
+  stopVerification();
+  stopCanaries();
+  stopLedger();
+  server.close();
+  db.close();
+  process.exit(0);
+};
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
