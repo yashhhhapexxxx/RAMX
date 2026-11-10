@@ -1,0 +1,1 @@
+{ "pools": [ { "pool_id": "auto-3f9a1c", "model": "Qwen/Qwen3-14B-FP8", "members": ["0xa4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4", "0xa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5"], "dht_prefix": "gp-5d0c7e21a9b4" } ], "waiting": ["0x4646464646464646464646464646464646464646"] }

@@ -1,0 +1,6 @@
+{
+  "object": "list",
+  "data": [
+    { "id": "Qwen/Qwen3-14B-FP8", "object": "model", "created": 1793900000, "owned_by": "ramx", "model_factor": 1.75, "pools": 1, "source": "gateway" }
+  ]
+}

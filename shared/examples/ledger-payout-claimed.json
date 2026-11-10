@@ -1,0 +1,1 @@
+{ "v": 1, "type": "payout_claimed", "epoch": 2989853, "payout_address": "alice.testnet", "amount_units": "1280000", "claim_tx": "9CxaimTx111111111111111111111111111111111111", "ts": 1793912700000, "sig": "0x9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f" }

@@ -1,0 +1,14 @@
+{
+  "id": "req_7f3a9c2b1d4e5f60",
+  "object": "chat.completion",
+  "created": 1793912345,
+  "model": "Qwen/Qwen3-14B-FP8",
+  "choices": [
+    {
+      "index": 0,
+      "message": { "role": "assistant", "content": null, "tool_calls": [{ "id": "call_0", "type": "function", "function": { "name": "read", "arguments": "{\"filePath\":\"src/main.ts\"}" } }] },
+      "finish_reason": "tool_calls"
+    }
+  ],
+  "usage": { "prompt_tokens": 412, "completion_tokens": 24, "total_tokens": 436 }
+}

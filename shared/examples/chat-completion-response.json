@@ -1,0 +1,10 @@
+{
+  "id": "req_01JC8Z6Q4M",
+  "object": "chat.completion",
+  "created": 1793912345,
+  "model": "Qwen/Qwen3-14B-FP8",
+  "choices": [
+    { "index": 0, "message": { "role": "assistant", "content": "Pipeline parallelism splits a model's layers across devices..." }, "finish_reason": "stop" }
+  ],
+  "usage": { "prompt_tokens": 412, "completion_tokens": 256, "total_tokens": 668 }
+}

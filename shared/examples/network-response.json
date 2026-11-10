@@ -1,0 +1,63 @@
+{
+  "pools": [
+    {
+      "type": "ramx.pool",
+      "pool_id": "pool-lan-1",
+      "models": [
+        "Qwen/Qwen3-14B-FP8"
+      ],
+      "members": [
+        "0xa4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+        "0xa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+        "0x4646464646464646464646464646464646464646"
+      ],
+      "status": "ready",
+      "coordinator_url_hash": "0xefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef",
+      "layer_map": [
+        {
+          "node_id": "0xa4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+          "layers": [
+            0,
+            20
+          ]
+        },
+        {
+          "node_id": "0xa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+          "layers": [
+            20,
+            29
+          ]
+        },
+        {
+          "node_id": "0x4646464646464646464646464646464646464646",
+          "layers": [
+            29,
+            40
+          ]
+        }
+      ],
+      "reliability": 0.91,
+      "load": 0.33,
+      "route_dispute": false,
+      "restarting": false
+    }
+  ],
+  "nodes": [
+    {
+      "type": "ramx.node",
+      "owner_account": "acc_7Hk2Qp",
+      "node_id": "0xa4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+      "pool_id": "pool-lan-1",
+      "gpu": "Apple M4",
+      "mem_gb": 16,
+      "status": "online",
+      "layers": [
+        0,
+        20
+      ],
+      "tok_s": 5.6,
+      "reliability": 0.97
+    }
+  ],
+  "source": "gateway"
+}

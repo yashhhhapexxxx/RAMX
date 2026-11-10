@@ -1,0 +1,22 @@
+{
+  "model": "Qwen/Qwen3-14B-FP8",
+  "stream": true,
+  "max_tokens": 32000,
+  "messages": [
+    { "role": "system", "content": "You are opencode, an interactive CLI tool that helps users with software engineering tasks." },
+    { "role": "user", "content": [{ "type": "text", "text": "What does src/main.ts do?" }] },
+    { "role": "assistant", "content": null, "tool_calls": [{ "id": "call_0", "type": "function", "function": { "name": "read", "arguments": "{\"filePath\":\"src/main.ts\"}" } }] },
+    { "role": "tool", "tool_call_id": "call_0", "content": "import { app } from './app.ts';\napp.listen(8787);" }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "read",
+        "description": "Reads a file from the local filesystem.",
+        "parameters": { "type": "object", "properties": { "filePath": { "type": "string", "description": "The absolute path to the file to read" } }, "required": ["filePath"] }
+      }
+    }
+  ],
+  "tool_choice": "auto"
+}

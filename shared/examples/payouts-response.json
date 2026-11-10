@@ -1,0 +1,19 @@
+{
+  "payout_address": "alice.testnet",
+  "payouts": [
+    {
+      "epoch": 2989853,
+      "amount_units": "1280000",
+      "merkle_root": "0xefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef",
+      "proof": [
+        "0x1212121212121212121212121212121212121212121212121212121212121212"
+      ],
+      "claimed": false,
+      "claim_tx": null,
+      "post_tx": "8PostTx1111111111111111111111111111111111111",
+      "claimable_at": 1793912460000,
+      "claimable": true,
+      "swept": false
+    }
+  ]
+}

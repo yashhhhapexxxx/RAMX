@@ -1,0 +1,11 @@
+{
+  "req_id": "req_01JC8Z6Q4M", "model": "Qwen/Qwen3-14B-FP8", "pay_type": "credits", "status": "ok",
+  "account_id": "acc_9Lm3Rt", "x402_payer": null, "x402_tx": null, "x402_amount": null, "x402_asset": null,
+  "in_tokens": 412, "out_tokens": 256, "cost_mc": 592200,
+  "split": {"nodes":{"0xa4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4":266490,"0xa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5":119920,"0x4646464646464646464646464646464646464646":146569},"burn_mc":29610,"reserve_mc":29611},
+  "route_source": "scheduler", "privacy": null,
+  "route": [{"node_id":"0xa4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4","layers":[0,20]},{"node_id":"0xa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5","layers":[20,29]},{"node_id":"0x4646464646464646464646464646464646464646","layers":[29,40]}],
+  "prompt_hash": "0xabababababababababababababababababababababababababababababababab", "resp_hash": "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd", "ledger_seq": 42, "ledger_tx": "9KcQh1gT6bXo8vYq3dWm2Lr5sNpF4uZaJe7HiCkB2xRt",
+  "attempts": [{"pool_id":"pool-lab-1","route":null,"outcome":"stalled","streamed_tokens":37,"late_nodes":["0xa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5"]},{"pool_id":"pool-lab-1","route":[{"node_id":"0xa4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4","layers":[0,20]},{"node_id":"0xa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5","layers":[20,29]},{"node_id":"0x4646464646464646464646464646464646464646","layers":[29,40]}],"outcome":"ok","streamed_tokens":219,"late_nodes":[]}],
+  "ts": 1793912345123
+}

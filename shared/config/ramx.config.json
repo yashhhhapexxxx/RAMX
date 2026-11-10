@@ -1,0 +1,63 @@
+{
+  "models": [
+    {
+      "model_id": "Qwen/Qwen3-8B-FP8",
+      "mlx_variant": "Qwen/Qwen3-8B-MLX-8bit",
+      "size_gb": 9.0,
+      "num_layers": 36,
+      "model_factor": 1.0,
+      "license": "apache-2.0",
+      "x402_prices": [
+        { "max_tokens": 512, "price_units": "2000" },
+        { "max_tokens": 2048, "price_units": "6000" }
+      ],
+      "context_length": 4096
+    },
+    {
+      "model_id": "Qwen/Qwen3-14B-FP8",
+      "mlx_variant": "Qwen/Qwen3-14B-MLX-8bit",
+      "size_gb": 16.3,
+      "num_layers": 40,
+      "model_factor": 1.75,
+      "license": "apache-2.0",
+      "x402_prices": [
+        { "max_tokens": 512, "price_units": "4000" },
+        { "max_tokens": 2048, "price_units": "12000" }
+      ],
+      "context_length": 4096
+    },
+    {
+      "model_id": "Qwen/Qwen3-30B-A3B-Instruct-2507-FP8",
+      "mlx_variant": "lmstudio-community/Qwen3-30B-A3B-Instruct-2507-MLX-8bit",
+      "size_gb": 32.5,
+      "num_layers": 48,
+      "model_factor": 1.5,
+      "license": "apache-2.0",
+      "x402_prices": [
+        { "max_tokens": 512, "price_units": "3000" },
+        { "max_tokens": 2048, "price_units": "9000" }
+      ],
+      "context_length": 4096
+    }
+  ],
+  "cost": { "input_token_weight": 0.2, "default_max_tokens": 512 },
+  "credit_split_bps": { "nodes": 9000, "burn": 500, "reserve": 500 },
+  "x402_split_bps": { "providers": 8000, "reserve": 1000, "operations": 1000 },
+  "reliability": { "success_weight": 0.7, "uptime_weight": 0.3, "initial_score": 0.8, "window_days": 7 },
+  "router": { "pool_heartbeat_max_age_s": 30, "retry_after_s": 10, "max_concurrent_per_pool": 2 },
+  "node_batching": { "max_batch_size": 4, "micro_batch_ratio": 2, "scheduler_wait_ms": 50 },
+  "pool_formation": { "max_rtt_ms": 5, "min_nodes": 2, "probe_every_s": 60 },
+  "resilience": { "stall_min_ms": 5000, "stall_p95_factor": 10, "first_token_base_ms": 30000, "first_token_ms_per_input_token": 20, "max_failovers": 1, "continuation": true,
+    "restart_cooldown_s": 120, "restart_timeout_s": 300, "route_check_window_s": 3600, "route_dispute_ratio": 0.2, "route_check_min_requests": 5 },
+  "x402_near": { "network": "near:testnet", "asset": "3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af", "decimals": 6 },
+  "topup": { "credits_per_usdc": 1000, "min_usdc": 0.01, "max_usdc": 100 },
+  "incentives": {
+    "vesting_s": 3600, "earned_expiry_days": 90, "penalty_min_risk": 0.8,
+    "node_cap_proven": 5, "proven_after_days": 7, "proven_min_reliability": 0.9, "proven_min_requests": 200, "proven_credentials": ["orb", "passport"],
+    "collusion": { "window_days": 7, "max_pair_share": 0.5, "min_pair_mc": 10000, "twin_window_s": 3600 },
+    "availability": { "epoch_s": 600, "min_wait_ms": 5000, "reward_mc_per_min": 10, "max_per_epoch_mc": 50000 }
+  },
+  "max_nodes_per_account": 3,
+  "session_ttl_s": 86400,
+  "transcript_retention_days": 7
+}

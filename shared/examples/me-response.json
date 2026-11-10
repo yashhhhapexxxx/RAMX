@@ -1,0 +1,13 @@
+{
+  "account_id": "acc_7Hk2Qp",
+  "payout_address": "alice.testnet",
+  "balance": {
+    "starter_mc": 9407800, "starter_expires_at": 1795121600000, "bought_mc": 1000000,
+    "earned_mc": 266490, "held_mc": 0, "earned_total_mc": 266490, "spent_total_mc": 592200
+  },
+  "ratio": 0.45,
+  "incentives": { "locked_mc": 121275, "next_unlock_at": 1795125200000, "credential": "orb", "node_cap": 3, "banned": false },
+  "nodes": [
+    { "node_id": "0xa4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4", "pool_id": "pool-lan-1", "gpu": "Apple M4", "mem_gb": 16, "reliability": 0.97, "online": true }
+  ]
+}

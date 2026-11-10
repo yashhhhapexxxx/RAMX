@@ -1,0 +1,37 @@
+{
+  "pool_id": "pool-lan-1",
+  "models": [
+    "Qwen/Qwen3-14B-FP8"
+  ],
+  "members": [
+    "0xa4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+    "0xa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+    "0x4646464646464646464646464646464646464646"
+  ],
+  "status": "ready",
+  "layer_map": [
+    {
+      "node_id": "0xa4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+      "layers": [
+        0,
+        20
+      ]
+    },
+    {
+      "node_id": "0xa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+      "layers": [
+        20,
+        29
+      ]
+    },
+    {
+      "node_id": "0x4646464646464646464646464646464646464646",
+      "layers": [
+        29,
+        40
+      ]
+    }
+  ],
+  "restarting": false,
+  "reliability": 0.91
+}

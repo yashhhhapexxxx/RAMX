@@ -1,0 +1,11 @@
+[
+  {
+    "node_id": "0xa4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
+    "owner_account": "acc_provider",
+    "payout_address": "alice.testnet",
+    "layers": [
+      0,
+      40
+    ]
+  }
+]
