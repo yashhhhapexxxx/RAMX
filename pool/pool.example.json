@@ -1,0 +1,15 @@
+{
+  "pool_id": "my-four-laptop-pool",
+  "model": "Qwen/Qwen3-14B-FP8",
+  "frontend_url": "https://your-marketplace.example",
+  "gateway_env": "gateway/.env",
+  "scheduler_port": 5100,
+  "api_port": 3001,
+  "gateway_port": 8080,
+  "members": [
+    {"name": "coordinator", "ssh": "local", "parallax_dir": "~/parallax"},
+    {"name": "mac-one", "ssh": "owner@mac-one.local", "parallax_dir": "~/Desktop/parallax"},
+    {"name": "mac-two", "ssh": "owner@mac-two.local", "parallax_dir": "~/Desktop/parallax"},
+    {"name": "gpu-two", "ssh": "owner@gpu-two.local", "parallax_dir": "~/parallax"}
+  ]
+}
