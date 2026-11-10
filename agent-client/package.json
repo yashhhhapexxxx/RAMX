@@ -1,0 +1,33 @@
+{
+  "name": "@ramx/agent-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/agent.ts",
+    "topup": "node --env-file-if-exists=.env src/topup.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "guarded": "node --env-file-if-exists=.env src/guarded.ts",
+    "attack": "node --env-file-if-exists=.env src/attack.ts"
+  },
+  "dependencies": {
+    "@near-js/accounts": "2.5.1",
+    "@near-js/crypto": "2.5.1",
+    "@near-js/providers": "2.5.1",
+    "@near-js/signers": "2.5.1",
+    "@near-js/types": "2.5.1",
+    "@ramx/shared": "workspace:*",
+    "@x402/core": "2.30.0",
+    "@x402/fetch": "2.30.0",
+    "@x402/near": "2.30.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2"
+  }
+}
