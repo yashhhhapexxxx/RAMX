@@ -1,0 +1,81 @@
+.gooey-nav {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  font-size: var(--gn-font);
+  line-height: 1.2;
+}
+.gooey-nav-framed {
+  border-radius: 999px;
+  padding: var(--gn-pad);
+  backdrop-filter: blur(20px) saturate(1.6);
+  background: var(--gn-frame);
+  box-shadow: var(--gn-frame-shadow);
+}
+.gooey-nav-stage { position: relative; max-width: 100%; }
+.gooey-nav-list {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gn-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gooey-nav-item { display: flex; }
+.gooey-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  padding: var(--gn-y) var(--gn-x);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--gn-muted);
+  cursor: pointer;
+  transition: color 200ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.gooey-nav-item[data-active] > .gooey-nav-link,
+.gooey-nav-link:hover { color: var(--gn-ink); }
+.gooey-nav-link:focus-visible {
+  outline: 2px solid var(--gn-ink);
+  outline-offset: 2px;
+}
+.gooey-nav-overlay {
+  pointer-events: none;
+  visibility: hidden;
+  position: absolute;
+  inset: 0;
+  color: var(--gn-active-ink);
+  clip-path: inset(100%);
+}
+.gooey-nav-ghost { color: inherit; }
+.gooey-nav-icon { display: inline-flex; flex: none; }
+.gooey-nav-icon svg { width: 1.15em; height: 1.15em; }
+.gooey-nav-rim {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--gn-frame-edge), inset 0 1px 0 var(--gn-frame-highlight);
+}
+.gooey-nav-canvas, .gooey-nav-fallback {
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.gooey-nav-fallback { display: none; overflow: visible; }
+@media (prefers-reduced-motion: reduce) {
+  .gooey-nav-link { transition: none; }
+}
+
+/* No primary destination is current (account pages): hide the active blob. */
+.gooey-nav.no-active .gooey-nav-canvas,
+.gooey-nav.no-active .gooey-nav-fallback,
+.gooey-nav.no-active .gooey-nav-overlay { opacity: 0; }
