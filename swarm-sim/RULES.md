@@ -10,7 +10,7 @@ ledger contract, and gives the winners priority slots.
 |---|---|---|
 | Buyer agent | `buyer-N.swarm.ramx.testnet` (1-20 in the demo) | its own full-access key (NEP-413 message) |
 | Seller (pool operator) | `seller-N.swarm.ramx.testnet` (1-5 in the demo) | its own full-access key |
-| Gateway | `gateway.ramx.testnet` | appends results to `ledger.ramx.testnet` |
+| Gateway | `gateway.ramx.testnet` | appends results to `ledger-v2.ramx.testnet` |
 
 ## A round (default 30 s)
 
@@ -40,7 +40,7 @@ t = 0 s                 t = 20 s                  t = 30 s
 5. **Group order.** All winning buyers of a model in a round form one group order: the pooled
    demand fills the sellers' capacity together. Each buyer's share of the cost = its units × price
    (pro-rata to units).
-6. **Ledger.** For each model with a trade, one `swarm_cleared` event on `ledger.ramx.testnet`:
+6. **Ledger.** For each model with a trade, one `swarm_cleared` event on `ledger-v2.ramx.testnet`:
    round, model, price, units, number of buyers and sellers, and sha256 of the full allocation
    list and of all commits. The full lists are at `GET /swarm/rounds/:id`, so anyone can recompute
    both hashes and the clearing.
