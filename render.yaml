@@ -23,7 +23,7 @@ services:
       - key: NEAR_RPC_URL
         value: https://rpc.testnet.fastnear.com
       - key: LEDGER_CONTRACT_ID
-        value: ledger-v2.ramx.testnet
+        value: ledger-v3.ramx.testnet
       - key: PAYOUT_CONTRACT_ID
         value: payout.ramx.testnet
       - key: ESCROW_CONTRACT_ID
@@ -36,6 +36,22 @@ services:
         value: relayer.ramx.testnet
       - key: X402_PAY_TO
         value: treasury.ramx.testnet
+      - key: USDC_CONTRACT_ID
+        value: 3e2210e1184b45b64c8a434c0a7e7b23cc04ea7eb7a6c3c32520d03d4afcb8af
+      - key: STARTER_CREDITS
+        value: "10000"
+      - key: STARTER_EXPIRY_DAYS
+        value: "14"
+      - key: WORLD_ENVIRONMENT
+        value: staging
+      - key: WORLD_APP_ID
+        sync: false
+      - key: WORLD_RP_ID
+        sync: false
+      - key: WORLD_ACTION
+        sync: false
+      - key: WORLD_RP_SIGNING_KEY
+        sync: false
       - key: NEARAI_FALLBACK
         value: "true"
       - key: PUBLIC_URL
