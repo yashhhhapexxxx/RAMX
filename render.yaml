@@ -23,7 +23,7 @@ services:
       - key: NEAR_RPC_URL
         value: https://rpc.testnet.fastnear.com
       - key: LEDGER_CONTRACT_ID
-        value: ledger.ramx.testnet
+        value: ledger-v2.ramx.testnet
       - key: PAYOUT_CONTRACT_ID
         value: payout.ramx.testnet
       - key: ESCROW_CONTRACT_ID
