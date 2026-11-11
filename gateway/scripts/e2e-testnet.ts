@@ -34,7 +34,7 @@ const e = process.env;
 const gateway = (e.GATEWAY_URL ?? "http://127.0.0.1:8080").replace(/\/+$/, "");
 const rpc = e.NEAR_RPC_URL;
 if (rpc && /mainnet/i.test(rpc)) throw new Error("testnet only");
-const ledger = e.LEDGER_CONTRACT_ID ?? "ledger.ramx.testnet";
+const ledger = e.LEDGER_CONTRACT_ID ?? "ledger-v2.ramx.testnet";
 const agentEnv = resolve(gatewayDir, e.AGENT_ENV ?? "../agent-client/.env");
 const providerEnv = resolve(gatewayDir, e.PROVIDER_ENV ?? "provider.env");
 const provider = nearProvider(rpc);

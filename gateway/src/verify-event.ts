@@ -3,7 +3,7 @@
  * Check ledger events on NEAR (anyone can run this; no secrets needed):
  *   node src/verify-event.ts <tx_hash> [gateway_pubkey_hex]
  *   node --env-file=.env src/verify-event.ts --pubkey      prints the public key of GATEWAY_SIGNING_KEY
- * Env: LEDGER_CONTRACT_ID (default ledger.ramx.testnet), NEAR_RPC_URL (default testnet RPC).
+ * Env: LEDGER_CONTRACT_ID (default ledger-v2.ramx.testnet), NEAR_RPC_URL (default testnet RPC).
  * Reads the transaction, takes every `ramx`/`ledger` NEP-297 event it emitted, and checks each
  * event's schema and its ed25519 signature against the key the contract publishes (or the one given).
  * Exit 1 if any event is invalid.
@@ -22,7 +22,7 @@ if (!arg || !/^[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(arg)) {
   console.error("usage: verify-event.ts <near_tx_hash> [gateway_pubkey_hex] | --pubkey");
   process.exit(1);
 }
-const contract = process.env.LEDGER_CONTRACT_ID ?? "ledger.ramx.testnet";
+const contract = process.env.LEDGER_CONTRACT_ID ?? "ledger-v2.ramx.testnet";
 const provider = nearProvider(process.env.NEAR_RPC_URL);
 const writer = String(await provider.callFunction(contract, "writer", {}));
 const pub = pubArg ?? String(await provider.callFunction(contract, "pubkey", {}));
