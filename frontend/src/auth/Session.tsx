@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { Me } from "@shared/types";
 import { Ctx } from "./context";
-import type { SessionState } from "./context";
+import type { LoginMethod, SessionState } from "./context";
 
 const KEY = "ramx.session.v1";
 const readToken = () => {
@@ -29,8 +29,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(() => !!readToken());
   const [error, setError] = useState<string | null>(null);
-  const [loginOpen, setLoginOpen] = useState(false);
+  // A redirect wallet (MyNearWallet) comes back with #signature=…&accountId=…: open the login sheet
+  // so it can finish the NEAR login (completeNearRedirect runs there).
+  const nearReturn = typeof location !== "undefined" && /(^#|&)signature=/.test(location.hash) && /accountId=/.test(location.hash);
+  const [loginOpen, setLoginOpen] = useState(nearReturn);
   const [next, setNext] = useState<string | null>(null);
+  const [method, setMethod] = useState<LoginMethod | null>(nearReturn ? "near" : null);
 
   const logout = useCallback(() => {
     writeToken(null);
@@ -79,15 +83,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       reload,
       loginOpen,
       next,
-      openLogin(n = null) {
+      method,
+      openLogin(n = null, m = null) {
         setNext(n);
+        setMethod(m);
         setLoginOpen(true);
       },
       closeLogin() {
         setLoginOpen(false);
       },
     }),
-    [token, me, loading, error, logout, reload, loginOpen, next],
+    [token, me, loading, error, logout, reload, loginOpen, next, method],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

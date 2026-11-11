@@ -143,3 +143,30 @@
   color: var(--cyan);
 }
 .session-link { display: inline-flex; align-items: center; gap: 8px; text-align: left; }
+
+/* Navbar: two logins (NEAR wallet, World ID with the credits tag). */
+.login-choices { display: flex; align-items: center; gap: 8px; }
+.credits-tag {
+  margin-left: 2px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #ffffff26;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.login-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid #f5b94744;
+  border-radius: 10px;
+  background: #f5b9470f;
+  color: #f2d9a6;
+  font-size: 13.5px;
+}
+@media (max-width: 760px) {
+  .credits-tag { display: none; }
+  .login-choices .console-cta { padding-inline: 10px; }
+}

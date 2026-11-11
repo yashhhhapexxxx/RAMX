@@ -8,7 +8,7 @@ export const env = {
   /** NEAR testnet JSON-RPC (read-only checks from the browser). */
   nearRpc: (raw.VITE_NEAR_RPC as string | undefined) || "https://rpc.testnet.fastnear.com",
   /** NEAR ledger contract (signed balance-change events). */
-  ledgerContract: (raw.VITE_LEDGER_CONTRACT as string | undefined) || "ledger.ramx.testnet",
+  ledgerContract: (raw.VITE_LEDGER_CONTRACT as string | undefined) || "ledger-v2.ramx.testnet",
   worldAppId: (raw.VITE_WORLD_APP_ID as string | undefined) || "",
   /** World ID action for login (spec §6.1). */
   worldAction: (raw.VITE_WORLD_ACTION as string | undefined) || "ramx-account",

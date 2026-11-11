@@ -10,7 +10,7 @@ import type { RouteName } from "../lib/router";
 import { env } from "../config/env";
 import { useFallbacks } from "../hooks/usePool";
 import { useSession } from "../auth/context";
-import { available, liveStarter } from "../lib/credits";
+import { available, liveStarter, STARTER_CREDITS } from "../lib/credits";
 import { fmtNum } from "../lib/format";
 
 /** Primary jobs. Account pages (credits, earnings, payouts, API access) live in the account menu. */
@@ -27,7 +27,7 @@ const accountLinks: { to: string; label: string; icon: IconName }[] = [
   { to: "/keys", label: "API access", icon: "key" },
 ];
 
-/** Header: credit balance + account menu when logged in, otherwise "Log in with World ID". */
+/** Header: credit balance + account menu when logged in, otherwise two logins: NEAR wallet and World ID (credits). */
 function SessionButton() {
   const s = useSession();
   const [open, setOpen] = useState(false);
@@ -48,9 +48,15 @@ function SessionButton() {
   if (s.loading) return <span className="session-chip" aria-busy="true"><Spinner size={12} /></span>;
   if (!s.me)
     return (
-      <button className="button button-blue console-cta" onClick={() => s.openLogin()}>
-        Log in with World ID <Icon name="user-check" size={14} />
-      </button>
+      <div className="login-choices">
+        <button className="button console-cta" onClick={() => s.openLogin(null, "near")} title="Log in with a NEAR testnet wallet. No starter credits: top up with USDC.">
+          <Icon name="wallet" size={14} /> Connect wallet
+        </button>
+        <button className="button button-blue console-cta" onClick={() => s.openLogin(null, "world")} title={`World ID gives ${fmtNum(STARTER_CREDITS)} free starter credits, once per human.`}>
+          <Icon name="user-check" size={14} /> Log in with World ID
+          <span className="credits-tag">{fmtNum(STARTER_CREDITS / 1000)}k free credits</span>
+        </button>
+      </div>
     );
   const b = s.me.balance;
   return (

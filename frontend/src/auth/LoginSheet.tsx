@@ -79,11 +79,18 @@ export default function LoginSheet() {
   }
 
   return (
-    <Sheet title="Log in" onClose={s.closeLogin}>
+    <Sheet title={s.method === "near" ? "Connect a NEAR wallet" : s.method === "world" ? "Log in with World ID" : "Log in"} onClose={s.closeLogin}>
       <div className="login-body">
-        <p className="muted">
-          One human, one account. A new account gets {fmtNum(STARTER_CREDITS)} starter credits (valid for 14 days) to spend on any pool. Verify with the Orb or Selfie Check. To earn more, link a laptop and serve layers.
-        </p>
+        {s.method !== "near" && (
+          <p className="muted">
+            One human, one account. <strong>Only World ID gives starter credits:</strong> a new account gets {fmtNum(STARTER_CREDITS)} credits (valid for 14 days) to spend on any pool. Verify with the Orb or Selfie Check. To earn more, link a laptop and serve layers.
+          </p>
+        )}
+        {s.method === "near" && (
+          <p className="login-note" role="note">
+            <Icon name="coins" size={13} /> Free credits only by proving you're a human with a World ID scan.
+          </p>
+        )}
 
         {outcome?.kind === "ok" ? (
           <div className="world-card is-ok" role="status">
@@ -108,7 +115,7 @@ export default function LoginSheet() {
               <p className="faint mono">{outcome.result.me.account_id}</p>
             </div>
           </div>
-        ) : rp === undefined ? (
+        ) : s.method === "near" ? null : rp === undefined ? (
           <Loading h={80} />
         ) : real ? (
           <div className="world-actions">
@@ -143,9 +150,9 @@ export default function LoginSheet() {
           </div>
         )}
 
-        {outcome?.kind !== "ok" && (
+        {outcome?.kind !== "ok" && s.method !== "world" && (
           <div className="world-actions">
-            <p className="muted">Or log in with a NEAR testnet wallet (Meteor, MyNearWallet). The wallet signs a login message; no transaction. Starter credits need World ID; top up with USDC instead.</p>
+            <p className="muted">{s.method === "near" ? "Log in" : "Or log in"} with a NEAR testnet wallet (Meteor, MyNearWallet). The wallet signs a login message; no transaction.{s.method === "near" ? "" : " No starter credits: those need World ID; top up with USDC instead."}</p>
             <NearLogin onLogin={(r) => { s.login(r); setOutcome({ kind: "ok", result: r }); }} onError={(message) => setOutcome({ kind: "error", message })} />
           </div>
         )}

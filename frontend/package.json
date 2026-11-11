@@ -21,6 +21,7 @@
     "@near-wallet-selector/my-near-wallet": "10.1.4",
     "@ramx/shared": "workspace:*",
     "@worldcoin/idkit": "^4.6.0",
+    "buffer": "6.0.3",
     "motion": "^12.43.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

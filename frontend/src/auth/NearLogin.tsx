@@ -5,6 +5,7 @@
    (MyNearWallet) come back to callbackUrl with the signature in the URL hash, which
    `completeNearRedirect` finishes on the next page load. Lazy-loaded with the login sheet. */
 import { useState } from "react";
+import { Buffer } from "buffer";
 import { setupWalletSelector } from "@near-wallet-selector/core";
 import { setupModal } from "@near-wallet-selector/modal-ui";
 import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
@@ -16,7 +17,6 @@ import { Icon } from "../components/Icon";
 import { Busy } from "../components/console/Status";
 
 const PENDING = "ramx.near-login.v1";
-const b64ToBytes = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 
 type Pending = { nonce: string; callbackUrl: string };
 function savePending(p: Pending) { try { sessionStorage.setItem(PENDING, JSON.stringify(p)); } catch { /* private window */ } }
@@ -63,13 +63,13 @@ export default function NearLogin({ onLogin, onError }: { onLogin: (r: LoginResu
       if (!wallet.signMessage) throw new Error(`${walletId} cannot sign messages; pick another wallet.`);
       const callbackUrl = `${location.origin}${location.pathname}`;
       savePending({ nonce: n.nonce, callbackUrl });
-      const signed = await wallet.signMessage({ message: n.message, recipient: n.recipient, nonce: b64ToBytes(n.nonce) as unknown as Buffer, callbackUrl });
+      const signed = await wallet.signMessage({ message: n.message, recipient: n.recipient, nonce: Buffer.from(n.nonce, "base64"), callbackUrl });
       if (!signed) return; // redirect wallet: the page comes back with the signature (completeNearRedirect)
       takePending();
       onLogin(await api.auth.nearVerify({ account_id: signed.accountId, public_key: signed.publicKey, signature: signed.signature, nonce: n.nonce, callback_url: callbackUrl }));
     } catch (e) {
       const m = (e as Error).message;
-      if (m !== "cancelled") onError(m);
+      if (m !== "cancelled") { console.error("NEAR login failed:", e); onError(m); }
     } finally {
       setBusy(false);
     }

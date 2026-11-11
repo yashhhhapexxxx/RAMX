@@ -38,7 +38,7 @@ export const T0 = Date.now();
 const MIN = 60_000;
 export const EPOCH_MS = 10 * MIN; // §10.5: 10 minutes for the demo
 export const LISTING_TTL = 120_000; // §11.2: 120 s, renewed every 30 s
-export const LEDGER_CONTRACT = "ledger.ramx.testnet";
+export const LEDGER_CONTRACT = "ledger-v2.ramx.testnet";
 export const USDC_UNITS = 1_000_000; // base units per USDC (6 decimals)
 export const PROVIDER_SHARE = 0.8; // §10.5: x402 income → 80% providers, 10% reserve, 10% operations
 
@@ -206,7 +206,7 @@ export const EPOCHS: Epoch[] = [CURRENT_EPOCH, 11, 10, 9].map((n) => {
   };
 });
 
-/* ── ledger (ledger.ramx.testnet) ───────────────────────────────────────── */
+/* ── ledger (ledger-v2.ramx.testnet) ───────────────────────────────────────── */
 const ev = (type: LedgerType, ts: number, payload: Record<string, unknown>): LedgerEvent => ({
   id: `ev_${hex(12)}`,
   type,

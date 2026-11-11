@@ -11,12 +11,17 @@ export type SessionState = {
   login(r: LoginResult): void;
   logout(): void;
   reload(): Promise<void>;
-  /** The World ID login sheet. `next` = where to go after a successful login. */
+  /** The login sheet. `next` = where to go after a successful login; `method` = show only World ID
+      ("world") or only the NEAR wallet ("near"); null = both. */
   loginOpen: boolean;
   next: string | null;
-  openLogin(next?: string | null): void;
+  method: LoginMethod | null;
+  openLogin(next?: string | null, method?: LoginMethod | null): void;
   closeLogin(): void;
 };
+
+/** Which login the navbar asked for: World ID (gives starter credits) or a NEAR wallet (no credits). */
+export type LoginMethod = "world" | "near";
 
 export const Ctx = createContext<SessionState | null>(null);
 

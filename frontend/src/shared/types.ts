@@ -153,7 +153,7 @@ export type TeeCheck = {
 /** Credit price quote from /v1/models (shared/src/api.ts PriceQuote). */
 export type PriceQuote = { credits_per_1k_in: number; credits_per_1k_out: number; multiplier: number; quoted_at: number };
 
-/* ── ledger (§8.6, §10.2): ledger.ramx.testnet ─────────────────────────── */
+/* ── ledger (§8.6, §10.2): ledger-v2.ramx.testnet ─────────────────────────── */
 
 /** Every ledger event type the gateway writes. */
 export type LedgerType = import("@ramx/shared").LedgerEventType;
