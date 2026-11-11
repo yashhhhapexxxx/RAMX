@@ -21,7 +21,7 @@ view() { # contract method args-json → decoded return value
 near_balance() { q view_account "\"account_id\":\"$1\"" | python3 -c 'import sys,json; r=json.load(sys.stdin); print("%.3f" % (int(r["result"]["amount"])/1e24) if "result" in r else "missing")'; }
 getenv() { grep -E "^$2=" "$1" 2>/dev/null | head -1 | cut -d= -f2- ; }
 
-G="gateway.$PARENT"; T="treasury.$PARENT"; R="relayer.$PARENT"; L="ledger.$PARENT"; P="payout.$PARENT"; A="agent-1.$PARENT"
+G="gateway.$PARENT"; T="treasury.$PARENT"; R="relayer.$PARENT"; L="${LEDGER_NAME:-ledger-v2}.$PARENT"; P="payout.$PARENT"; A="agent-1.$PARENT"
 
 echo "accounts (NEAR balance, need gas)"
 for acct in "$PARENT" "$G" "$T" "$R" "$L" "$P" "$A"; do

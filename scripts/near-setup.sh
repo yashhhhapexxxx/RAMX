@@ -30,7 +30,7 @@ for tool in near cargo-near node openssl python3 curl; do command -v "$tool" >/d
 GATEWAY="gateway.$PARENT"     # writes the ledger contract (NEAR_GATEWAY_ACCOUNT_ID)
 TREASURY="treasury.$PARENT"   # receives x402 USDC, posts epochs (X402_PAY_TO = SETTLER_ACCOUNT_ID)
 RELAYER="relayer.$PARENT"     # in-process x402 facilitator, pays gas (X402_RELAYER_ID)
-LEDGER="ledger.$PARENT"       # contracts-near/ledger
+LEDGER="${LEDGER_NAME:-ledger-v2}.$PARENT"       # contracts-near/ledger
 PAYOUT="payout.$PARENT"       # contracts-near/payout
 AGENT="agent-1.$PARENT"       # open agent: full-access key, pays per request with x402
 ESCROW="escrow.$PARENT"       # contracts-near/escrow (guarded agent wallet)
