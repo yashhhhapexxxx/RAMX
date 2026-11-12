@@ -3,13 +3,13 @@
 Large AI models exceed the memory of many everyday laptops, while nearby GPUs sit idle.
 Connecting those machines is only half the problem: an open network also needs identity, live discovery, fair accounting, payments that AI agents can make on their own, and limits on what a compromised agent can spend.
 
-**RAMX combines the RAM and GPUs of nearby Apple and NVIDIA computers into one model-serving pool, and runs the marketplace on NEAR.** Providers contribute compute and earn USDC; people and AI agents send prompts through an OpenAI-compatible API using credits or per-request x402 payments in USDC on NEAR. Every balance change is signed and written to a NEAR contract, providers claim USDC from a Merkle payout contract, and an agent can be given a wallet that the chain itself keeps within a budget. Built for NEAR HACKATHON 2026.
+**RAMX combines the RAM and GPUs of nearby Apple and NVIDIA computers into GPU Pools, and runs the marketplace on NEAR.** A **GPU Pool** is a group of nearby laptops that together serve one AI model: each machine holds only a slice of the model's layers, so the pool runs a model that none of its members could load alone. Providers contribute compute and earn USDC; people and AI agents send prompts through an OpenAI-compatible API using credits or per-request x402 payments in USDC on NEAR. Every balance change is signed and written to a NEAR contract, providers claim USDC from a Merkle payout contract, and an agent can be given a wallet that the chain itself keeps within a budget. Built for NEAR HACKATHON 2026.
 
-[Repository](https://github.com/yashhhhapexxxx/RAMX) · Hosted gateway: _TODO_ · Demo video: _TODO_ · Website: 
+[Repository](https://github.com/yashhhhapexxxx/RAMX) · Website: [ramx-eight.vercel.app](https://ramx-eight.vercel.app) · Hosted gateway: [ramx-gateway.onrender.com](https://ramx-gateway.onrender.com) · Demo video: _TODO_
 
 ## Our approach
 
-The **gateway chooses a pool; Parallax chooses its GPU stages**. Model layers stay on the workers, which exchange hidden states over the local network. The gateway handles identity, billing, payments and routing; NEAR holds the money and the audit trail. When no laptop pool is ready, the gateway serves the request from a model in NEAR AI Cloud's secure hardware (TEE).
+The **gateway chooses a GPU Pool; Parallax chooses its GPU stages**. Model layers stay on the workers, which exchange hidden states over the local network. The gateway handles identity, billing, payments and routing; NEAR holds the money and the audit trail. When no GPU Pool is ready, the gateway serves the request from a model in NEAR AI Cloud's secure hardware (TEE).
 
 ```mermaid
 flowchart TD
@@ -124,7 +124,7 @@ Configure `gateway/.env` with your World ID app, JWT/signing key, NEAR accounts 
 | Refused on chain: payee not on the allow list | [J4YypM…](https://testnet.nearblocks.io/txns/J4YypMMUmYSDv87xA4bAjUTTUELAaFofrzy5zS7J3hja) |
 | Refused on chain: above the per-call limit | [EKwP6t…](https://testnet.nearblocks.io/txns/EKwP6tQZLgaHQNFS9ALqJavzjpUD73t4VrZH1TAJxTFG) |
 | Capacity-market round cleared (first ledger) | [GfbcX7…](https://testnet.nearblocks.io/txns/GfbcX7ofwgcJHVG2Q2meXCjpEGdXn3zZ1dypo2QP88jz) |
-| Agent pays with x402, answer served by the laptop pool (Qwen3-8B) | [Gpxq3h…](https://testnet.nearblocks.io/txns/Gpxq3hxD4JVWvgmAS2Ps6Y4j4DG2CyQWoSssWYvzk1j3), [DtrZwH…](https://testnet.nearblocks.io/txns/DtrZwHJwdg62Xd6K6T4Lo29zt5GqtZKbGFgV6urXG1pd), [TSu5Cy…](https://testnet.nearblocks.io/txns/TSu5CyYnuLC8G4wAFmkPR1h3DJytX42LJ1rggfgUmfc) |
+| Agent pays with x402, answer served by a GPU Pool (Qwen3-8B) | [Gpxq3h…](https://testnet.nearblocks.io/txns/Gpxq3hxD4JVWvgmAS2Ps6Y4j4DG2CyQWoSssWYvzk1j3), [DtrZwH…](https://testnet.nearblocks.io/txns/DtrZwHJwdg62Xd6K6T4Lo29zt5GqtZKbGFgV6urXG1pd), [TSu5Cy…](https://testnet.nearblocks.io/txns/TSu5CyYnuLC8G4wAFmkPR1h3DJytX42LJ1rggfgUmfc) |
 | Treasury posts the epoch payout (Merkle root + USDC) | [AuYYgQ…](https://testnet.nearblocks.io/txns/AuYYgQ1kdt1wU5NGxmEt8Ah3mi5fTDMQyqb2qoVh4wRw) |
 | Provider claims its share with a Merkle proof (80% of the x402 income → `provider-1.ramx.testnet`) | [B8ZaniL…](https://testnet.nearblocks.io/txns/B8ZaniLqcTAva9EoWiLuDZv1iqvfSi1dQVsxPhQhGPqK) |
 

@@ -4,7 +4,7 @@
 ┌──────────────────────────────────────────────┐
 │ 1. PROVIDER JOINS                            │
 │ Laptop owner logs in (World ID / NEAR wallet)│
-│ → Create / Join pool → run helper            │
+│ → Create / Join GPU Pool → run helper        │
 │ → Parallax loads model layers on the laptop  │
 └──────────────────────────────────────────────┘
                       │
