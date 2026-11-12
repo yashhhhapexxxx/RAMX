@@ -52,12 +52,19 @@ export default function NearLogin({ onLogin, onError }: { onLogin: (r: LoginResu
       const n: NearNonce = await api.auth.nearNonce();
       const selector = await setupWalletSelector({ network: "testnet", modules: [setupMeteorWallet(), setupMyNearWallet()] });
       const modal = setupModal(selector, { contractId: "", description: "Log in to RAMX with your NEAR testnet account. No transaction, no fee: the wallet only signs a login message." });
-      modal.show();
-      const walletId = await new Promise<string>((resolve, reject) => {
-        const sub = selector.store.observable.subscribe((state) => {
-          if (state.selectedWalletId) { sub.unsubscribe(); modal.hide(); resolve(state.selectedWalletId); }
+      // A wallet connected in an earlier attempt stays selected: go straight to signing.
+      const walletId = selector.store.getState().selectedWalletId ?? await new Promise<string>((resolve, reject) => {
+        let done = false;
+        let sub: { unsubscribe(): void } | undefined;
+        const finish = (fn: () => void) => { if (done) return; done = true; sub?.unsubscribe(); fn(); };
+        // The store can emit synchronously inside subscribe(), before `sub` is assigned.
+        sub = selector.store.observable.subscribe((state) => {
+          const id = state.selectedWalletId;
+          if (id) finish(() => { modal.hide(); resolve(id); });
         });
-        modal.on("onHide", ({ hideReason }) => { if (hideReason === "user-triggered") { sub.unsubscribe(); reject(new Error("cancelled")); } });
+        if (done) sub.unsubscribe();
+        modal.on("onHide", ({ hideReason }) => { if (hideReason === "user-triggered") finish(() => reject(new Error("cancelled"))); });
+        modal.show();
       });
       const wallet = await selector.wallet(walletId);
       if (!wallet.signMessage) throw new Error(`${walletId} cannot sign messages; pick another wallet.`);
