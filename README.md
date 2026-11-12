@@ -8,7 +8,7 @@ Connecting those machines is only half the problem: an open network also needs i
 [Repository](https://github.com/yashhhhapexxxx/RAMX) · Website: [ramx-eight.vercel.app](https://ramx-eight.vercel.app) · Hosted gateway: [ramx-gateway.onrender.com](https://ramx-gateway.onrender.com) · Demo video: _TODO_
 
 ## Our approach
-
+UPDAT
 The **gateway chooses a GPU Pool; Parallax chooses its GPU stages**. Model layers stay on the workers, which exchange hidden states over the local network. The gateway handles identity, billing, payments and routing; NEAR holds the money and the audit trail. When no GPU Pool is ready, the gateway serves the request from a model in NEAR AI Cloud's secure hardware (TEE).
 
 ```mermaid
@@ -42,9 +42,22 @@ flowchart TD
 - **Discovery** comes from signed node heartbeats inside the gateway. Routing checks fresh heartbeats, reliability and layer coverage.
 - **SQLite + NEAR** handle atomic credit holds, usage settlement and an asynchronous signed audit trail on `ledger-v2.ramx.testnet`. Credits split 90% to serving nodes by layers, 5% burn and 5% reserve. 80% of x402 USDC income goes to providers each epoch: the treasury funds and posts a Merkle root in one `ft_transfer_call`, and each provider claims its own leaf.
 - **Guarded agents.** An agent account can hold only a function-call key for `escrow.pay`. The escrow contract enforces the owner's policy on chain: allowed payees, a per-call maximum, a total budget and a pause switch. A prompt-injected agent cannot pay anyone else, overspend or change its own limits.
-- **Honest billing.** The gateway bills `min(reported output tokens, observed + 8)`; a pool that over-reports loses reliability. A 10% sample of pool answers is judged by a NEAR AI Cloud TEE model with a fresh-nonce attestation and a signed response (a plausibility check, not proof of correct execution). Answers served by NEAR AI Cloud carry their attestation on the receipt.
+- **Honest billing.** The gateway bills `min(reported output tokens, observed + 8)`; a pool that over-reports loses reliability. A 10% sample of pool answers is judged by a NEAR AI Cloud TEE model with a fresh-nonce attestation and a signed response (a plausibility check, not proof of correct execution). Answers served by NEAR AI Cloud carry their attestation on the receipt, plus the enclave's signature over that exact request and answer, checked against an attested key and recorded as a signed ledger event.
+- **Privacy.** Each request picks who may see it (`x-ramx-privacy`: `trusted-ends`, `trusted-all` or `tee`), and the mode is signed into its ledger event. A `tee` request can also be **end-to-end encrypted**: the client encrypts each message to the enclave key it attested itself, and the answer comes back encrypted to the client, so the gateway only relays ciphertext. Before a prompt reaches an untrusted laptop, the gateway swaps emails, phone numbers, card numbers and secrets for placeholders such as `[EMAIL_1]` and restores them in the answer. The chain stores only salted hashes. Details: [PRIVACY-AND-PRIVATE-AI.md](PRIVACY-AND-PRIVATE-AI.md).
 - **Capacity market.** AI agents bid for priority slots in 30-second sealed-bid rounds (commit, reveal, one uniform price per model). Each agent is its own NEAR account and signs its own bids; results go on the ledger. Rules: [swarm-sim/RULES.md](swarm-sim/RULES.md).
 - **OpenCode tools run on the requester's laptop.** The gateway translates model tool calls into the OpenAI protocol.
+
+## Share your laptop, use it like OpenAI
+
+**The more you share, the more you get.** A big AI model is split into layers, and every laptop in a GPU Pool runs the layers it holds. Every laptop earns credits for the layers it serves, plus a bonus just for staying online and ready, and each account has a **share ratio** (credits earned ÷ credits spent). When the network is busy, requests from accounts with a higher ratio go to the front of the queue. The rules keep it fair: serving your own requests earns nothing, earnings unlock only after an hour, and a laptop caught cheating loses them. This is what makes RAMX grow on its own: sharing is rewarded with free AI and faster service, so people have a reason to keep their laptops in the pool. A student who shares their laptop overnight earns the credits that pay for their own AI use the next day, and gets served first when it matters.
+
+**Using RAMX is as easy as using OpenAI.** The gateway speaks the standard OpenAI API (`/v1/chat/completions`, `/v1/models`, streaming and tool calls), so any app or library that works with OpenAI works with RAMX by changing two settings: the base URL and the API key. Coding agents work too: copy the ready-made config from the **Keys** page into `opencode.json` and run **OpenCode**; your files and tools stay on your own laptop, and only the model calls go to the GPU Pool. No account at all? An AI agent can still use RAMX: it gets an HTTP `402` with a price, pays for that one request in USDC with x402, and receives its answer.
+
+```bash
+curl https://ramx-gateway.onrender.com/v1/chat/completions \
+  -H "Authorization: Bearer $RAMX_API_KEY" -H "Content-Type: application/json" \
+  -d '{"model":"Qwen/Qwen3-8B-FP8","messages":[{"role":"user","content":"Hello!"}]}'
+```
 
 ## Contracts and accounts (NEAR testnet)
 
@@ -95,6 +108,7 @@ pnpm install
 4. **Pay per request with x402:** `pnpm --filter @ramx/gateway e2e:testnet --questions 2` pays in USDC, serves the answers, writes the ledger events and verifies them, and prints every NearBlocks link.
 5. **Run the capacity market:** `pnpm --filter @ramx/swarm-sim start`, then open `/swarm` in the app.
 6. **Check the TEE attestation:** `node --env-file=gateway/.env gateway/scripts/tee-attest.ts`.
+7. **Verify a private request yourself:** `pnpm --filter @ramx/agent-client private --mode tee` sends a private request, then checks on your own machine that the receipt and the NEAR transaction hold no text, that the salted hashes match, that the ledger event is correctly signed, and (with your own `NEARAI_API_KEY`) the TEE attestation with a fresh nonce. Add `--e2ee` to encrypt the prompt end to end: the client attests the enclave itself, encrypts to its key and decrypts the answer locally, so RAMX only ever relays ciphertext.
 
 ### Contribute a laptop
 
@@ -124,6 +138,8 @@ Configure `gateway/.env` with your World ID app, JWT/signing key, NEAR accounts 
 | Refused on chain: payee not on the allow list | [J4YypM…](https://testnet.nearblocks.io/txns/J4YypMMUmYSDv87xA4bAjUTTUELAaFofrzy5zS7J3hja) |
 | Refused on chain: above the per-call limit | [EKwP6t…](https://testnet.nearblocks.io/txns/EKwP6tQZLgaHQNFS9ALqJavzjpUD73t4VrZH1TAJxTFG) |
 | Capacity-market round cleared (first ledger) | [GfbcX7…](https://testnet.nearblocks.io/txns/GfbcX7ofwgcJHVG2Q2meXCjpEGdXn3zZ1dypo2QP88jz) |
+| Private request (`x-ramx-privacy: tee`) on the hosted gateway: served in NEAR AI Cloud secure hardware, attestation on the receipt; the ledger event holds only salted hashes, which the caller re-computed and matched | [GWcfcW…](https://testnet.nearblocks.io/txns/GWcfcW9BQF8q59UernT5zcc8utbH4m9fymNpyX1NtQg) (payment), [Cmsm3o…](https://testnet.nearblocks.io/txns/Cmsm3oEZxPbhiQK2DmrFTmHD8rvJozLRuQA5sBMi8L9g) (ledger event) |
+| Private request (`x-ramx-privacy: trusted-all`) with no trusted laptop online: sent to secure hardware instead of an untrusted laptop | [4Tbba2…](https://testnet.nearblocks.io/txns/4Tbba2xTADjtnE8KCC1PVDcjg6UAehNktecnC4ssQ36b) (payment), [BjBAz9…](https://testnet.nearblocks.io/txns/BjBAz9RrLiLJuCwaNSjkpnTAYQ2xvapcGabHs3HVnQdm) (ledger event) |
 | Agent pays with x402, answer served by a GPU Pool (Qwen3-8B) | [Gpxq3h…](https://testnet.nearblocks.io/txns/Gpxq3hxD4JVWvgmAS2Ps6Y4j4DG2CyQWoSssWYvzk1j3), [DtrZwH…](https://testnet.nearblocks.io/txns/DtrZwHJwdg62Xd6K6T4Lo29zt5GqtZKbGFgV6urXG1pd), [TSu5Cy…](https://testnet.nearblocks.io/txns/TSu5CyYnuLC8G4wAFmkPR1h3DJytX42LJ1rggfgUmfc) |
 | Treasury posts the epoch payout (Merkle root + USDC) | [AuYYgQ…](https://testnet.nearblocks.io/txns/AuYYgQ1kdt1wU5NGxmEt8Ah3mi5fTDMQyqb2qoVh4wRw) |
 | Provider claims its share with a Merkle proof (80% of the x402 income → `provider-1.ramx.testnet`) | [B8ZaniL…](https://testnet.nearblocks.io/txns/B8ZaniLqcTAva9EoWiLuDZv1iqvfSi1dQVsxPhQhGPqK) |
@@ -139,7 +155,7 @@ Real laptops, real runs: each pool below was run by our team on our own machines
 | 3 | **2** · M4 + RTX 4060 | Qwen3-14B | M4: layers 0–28 → 4060: layers 29–39 | **5.2–6.0 tok/s** · first token 0.65–1.2 s | Apple + NVIDIA run one model **neither laptop can run alone** |
 | 4 | **3** · M4 + M5 + RTX 4060 | Qwen3-14B | M4: 0–13 → M5: 14–28 → 4060: 29–39 | **7.92 tok/s** (median) · first token 0.43 s | Three-laptop pipeline, 5 of 5 runs passed |
 | 5 | **1** · RTX 4060 with llama.cpp (reference, not a pool) | Qwen2.5-7B (4-bit) | whole model | **53.5 tok/s** | The single-GPU speed limit, for comparison |
-| 6 | **GPU Pools on NEAR** | Qwen3-8B | chosen by Parallax | 3 paid answers | Paid with x402 ([Gpxq3h…](https://testnet.nearblocks.io/txns/Gpxq3hxD4JVWvgmAS2Ps6Y4j4DG2CyQWoSssWYvzk1j3)), ledger events #24–26 verified, provider payout claimed ([B8ZaniL…](https://testnet.nearblocks.io/txns/B8ZaniLqcTAva9EoWiLuDZv1iqvfSi1dQVsxPhQhGPqK)) |
+| 6 | Pool run | Qwen3-8B | chosen by Parallax | 3 of 3 answers served | End-to-end run: requests in, answers out from the pool, every request billed  |
 
 *tok/s = tokens generated per second. Layer numbers are the model layers each laptop holds (Qwen3-14B has 40).*
 
@@ -149,10 +165,10 @@ Each track below links to a short write-up and to the on-chain transactions that
 
 | Track | What RAMX delivers | Proof on NEAR testnet | Write-up |
 |---|---|---|---|
-| **AI Security & Defense** | A guarded agent holds only a function-call key for `escrow.pay`; the escrow contract enforces the owner's policy on chain (allowed payees, per-call cap, total budget, pause). `pnpm attack` runs five prompt-injection attacks and all five are refused by the chain. Signed ledger events, NEP-413 login checked against on-chain keys, billing capped at observed tokens, vesting and clawback. | [J4YypM…](https://testnet.nearblocks.io/txns/J4YypMMUmYSDv87xA4bAjUTTUELAaFofrzy5zS7J3hja), [EKwP6t…](https://testnet.nearblocks.io/txns/EKwP6tQZLgaHQNFS9ALqJavzjpUD73t4VrZH1TAJxTFG), [9gFGWr…](https://testnet.nearblocks.io/txns/9gFGWr23xEkdqPXF97T5Y5FHNgP6caHTaqA7sEyRXaPh) | [AI-SECURITY-AND-DEFENSE.md](AI-SECURITY-AND-DEFENSE.md) |
+| **AI Security & Defense** | A guarded agent holds only a function-call key for `escrow.pay`; the escrow contract enforces the owner's policy on chain (allowed payees, per-call cap, total budget, pause). `pnpm attack` runs five prompt-injection attacks and all five are refused by the chain. Signed ledger events, NEP-413 login checked against on-chain keys, billing capped at observed tokens, vesting and clawback; secrets pasted into prompts never reach an untrusted laptop, and TEE answers carry a verified enclave signature. | [J4YypM…](https://testnet.nearblocks.io/txns/J4YypMMUmYSDv87xA4bAjUTTUELAaFofrzy5zS7J3hja), [EKwP6t…](https://testnet.nearblocks.io/txns/EKwP6tQZLgaHQNFS9ALqJavzjpUD73t4VrZH1TAJxTFG), [9gFGWr…](https://testnet.nearblocks.io/txns/9gFGWr23xEkdqPXF97T5Y5FHNgP6caHTaqA7sEyRXaPh) | [AI-SECURITY-AND-DEFENSE.md](AI-SECURITY-AND-DEFENSE.md) |
 | **Agent Economy** | AI agents buy inference on their own: HTTP 402 → USDC payment with x402 → answer, no sign-up. A relayer pays the gas; API keys carry budgets; open and guarded agent modes. Providers are paid from agent income every epoch. OpenCode support. | [Gpxq3h…](https://testnet.nearblocks.io/txns/Gpxq3hxD4JVWvgmAS2Ps6Y4j4DG2CyQWoSssWYvzk1j3), [B8ZaniL…](https://testnet.nearblocks.io/txns/B8ZaniLqcTAva9EoWiLuDZv1iqvfSi1dQVsxPhQhGPqK) | [AGENT-ECONOMY.md](AGENT-ECONOMY.md) |
 | **Open Innovation** | Idle laptop memory becomes a shared AI utility: several consumer laptops (Apple MLX and NVIDIA) serve one model none of them could load alone, behind an OpenAI-compatible API. Every balance change is a signed event on the ledger contract; providers are paid through an on-chain Merkle payout with an open format and a cross-language test vector. | [TSu5Cy…](https://testnet.nearblocks.io/txns/TSu5CyYnuLC8G4wAFmkPR1h3DJytX42LJ1rggfgUmfc), [AuYYgQ…](https://testnet.nearblocks.io/txns/AuYYgQ1kdt1wU5NGxmEt8Ah3mi5fTDMQyqb2qoVh4wRw) | [OPEN-INNOVATION.md](OPEN-INNOVATION.md) |
-| **Privacy & Private AI** | Per-request privacy with `x-ramx-privacy`: `trusted-ends`, `trusted-all`, or `tee` (NEAR AI Cloud model in secure hardware, fresh-nonce attestation on the receipt). The chain stores only salted prompt/response hashes, with the salt returned to the caller alone; transcripts are AES-256-GCM encrypted and deleted after 7 days; private requests are never sent to the TEE judge. | `node --env-file=gateway/.env gateway/scripts/tee-attest.ts` | [PRIVACY-AND-PRIVATE-AI.md](PRIVACY-AND-PRIVATE-AI.md) |
+| **Privacy & Private AI** | Per-request privacy with `x-ramx-privacy`: `trusted-ends`, `trusted-all`, or `tee` (NEAR AI Cloud model in secure hardware, fresh-nonce attestation on the receipt, and the enclave's signature over the exact request and answer), optionally **end-to-end encrypted** so even the RAMX gateway sees only ciphertext. Emails, phone numbers, card numbers and secrets are replaced by placeholders before any untrusted laptop sees a prompt. The chain stores only salted prompt/response hashes, with the salt returned to the caller alone, and the privacy mode is signed into each event; transcripts are AES-256-GCM encrypted and deleted after 7 days. `pnpm --filter @ramx/agent-client private` checks all of it on your own machine. | [GWcfcW…](https://testnet.nearblocks.io/txns/GWcfcW9BQF8q59UernT5zcc8utbH4m9fymNpyX1NtQg), [Cmsm3o…](https://testnet.nearblocks.io/txns/Cmsm3oEZxPbhiQK2DmrFTmHD8rvJozLRuQA5sBMi8L9g), [4Tbba2…](https://testnet.nearblocks.io/txns/4Tbba2xTADjtnE8KCC1PVDcjg6UAehNktecnC4ssQ36b) | [PRIVACY-AND-PRIVATE-AI.md](PRIVACY-AND-PRIVATE-AI.md) |
 | **AI Swarms** | 25 autonomous agents, each its own NEAR account, trade priority inference slots in 30-second commit–reveal sealed-bid rounds with one uniform price per model and pooled group orders. Every cleared round is on the ledger with hashes anyone can recompute. | [GfbcX7…](https://testnet.nearblocks.io/txns/GfbcX7ofwgcJHVG2Q2meXCjpEGdXn3zZ1dypo2QP88jz) | [AI-SWARMS.md](AI-SWARMS.md) |
 | **Autonomous Business** | A laptop that earns while its owner sleeps: it serves requests overnight and earns credits for the same models plus a share of customer payments. Prices adjust to demand every 30 seconds, earnings split by layers served, payouts settle each epoch with no manual payroll, and a reserve is kept from every payment. | [AuYYgQ…](https://testnet.nearblocks.io/txns/AuYYgQ1kdt1wU5NGxmEt8Ah3mi5fTDMQyqb2qoVh4wRw), [B8ZaniL…](https://testnet.nearblocks.io/txns/B8ZaniLqcTAva9EoWiLuDZv1iqvfSi1dQVsxPhQhGPqK) | [AUTONOMOUS-BUSINESS.md](AUTONOMOUS-BUSINESS.md) |
 
@@ -165,12 +181,7 @@ Each track below links to a short write-up and to the on-chain transactions that
 - **Accounting across systems:** inference, the ledger contract and payouts finish at different times. Atomic local transactions, ordered contract appends that refuse duplicates (`first_seq`), and pending receipts keep those states separate.
 - **Public RPC limits:** `rpc.testnet.near.org` is deprecated and rate-limited; we use FastNEAR.
 
-## What's next
-
-- Settle capacity-market orders in USDC through the escrow.
-- Turn the TEE plausibility check into calibrated output verification.
-- Improve recovery from failed pipeline stages; test WAN pools; more hardware and MoE models.
-- Batch provider claims; harden the system before considering mainnet payments.
+.
 
 ## Built with
 

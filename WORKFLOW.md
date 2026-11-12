@@ -20,7 +20,7 @@
 ┌──────────────────────────────────────────────┐
 │ 3. USER / AI AGENT GETS ACCESS               │
 │ a) World ID   → 10,000 free starter credits  │
-│ b) NEAR wallet→ 0 credits, top up with USDC  │
+│ b) NEAR wallet→ 10,000 credits (daily cap)   │
 │ c) API key    → spends credits within a cap  │
 │ d) no login   → pays per request (x402)      │
 │ e) guarded agent → pays via escrow contract  │
@@ -32,6 +32,8 @@
 │ OpenAI-style /v1/chat/completions            │
 │ → hold credits, or 402 → USDC x402 payment   │
 │   (relayer submits it on NEAR, pays gas)     │
+│ optional x-ramx-privacy: trusted-ends /      │
+│   trusted-all / tee (+ end-to-end encrypted) │
 └──────────────────────────────────────────────┘
                       │
                       ▼
@@ -40,6 +42,9 @@
 │ Router picks a ready pool                    │
 │ (reliability × free capacity)                │
 │ → no pool ready? → NEAR AI Cloud (TEE model) │
+│ → tee, or no trusted laptop → TEE enclave    │
+│ → untrusted pool? emails, phones, cards,     │
+│   secrets → placeholders like [EMAIL_1]      │
 └──────────────────────────────────────────────┘
                       │
                       ▼
@@ -64,13 +69,18 @@
 │ 10% of pool answers → NEAR AI Cloud TEE judge│
 │ (attestation + signed verdict on receipt)    │
 │ over-reporting pool → loses reliability      │
+│ TEE answers: attestation + enclave signature │
+│   over the exact request and answer          │
 └──────────────────────────────────────────────┘
                       │
                       ▼
 ┌──────────────────────────────────────────────┐
 │ 9. AUDIT LEDGER (async)                      │
 │ every balance change = signed event          │
-│ → appended to ledger-v2.ramx.testnet         │
+│ → appended to the NEAR ledger contract       │
+│   (ledger-v3.ramx.testnet for the hosted app)│
+│ request events: salted hashes, privacy mode, │
+│   e2ee flag (never the text)                 │
 │ → anyone verifies: verify-event.ts <tx>      │
 └──────────────────────────────────────────────┘
                       │
@@ -111,8 +121,14 @@
 
 ┌──────────────────────────────────────────────┐
 │ PRIVACY                                      │
+│ x-ramx-privacy → trusted laptops or TEE      │
+│ tee + E2EE: client attests the enclave,      │
+│   encrypts to its key; gateway sees only     │
+│   ciphertext, answer decrypted on the client │
+│ untrusted laptops get placeholders, not      │
+│   emails / phones / cards / secrets          │
 │ chain stores salted hashes, never text       │
-│ x-ramx-privacy → trusted nodes or TEE        │
 │ transcripts encrypted, deleted after 7 days  │
+│ verify it yourself: agent-client private     │
 └──────────────────────────────────────────────┘
 ```
