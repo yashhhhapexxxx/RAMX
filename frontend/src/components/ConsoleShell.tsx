@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Brand } from "./Shared";
+import { BRAND } from "../config/brand";
 import GooeyNav from "./GooeyNav";
 import { Icon } from "./Icon";
 import { Spinner } from "./console/Status";
@@ -115,7 +116,7 @@ export default function ConsoleShell({
   return (
     <div className="console">
       <header className="console-header">
-        <Brand />
+        <Brand label={BRAND.consoleLabel} />
         <GooeyNav
           className={`console-nav${active < 0 ? " no-active" : ""}`}
           ariaLabel="Console navigation"

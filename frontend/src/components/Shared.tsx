@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Icon } from "./Icon";
 import { BRAND } from "../config/brand";
 
-export function Brand({ onClick }: { onClick?: () => void }) {
+export function Brand({ onClick, label = BRAND.short }: { onClick?: () => void; label?: string }) {
   return (
     <a
       className="brand"
@@ -24,7 +24,7 @@ export function Brand({ onClick }: { onClick?: () => void }) {
     >
       <Icon name="chip" size={29} />
       <span>
-        {BRAND.short}
+        {label}
         <span className="brand-period">.</span>
       </span>
     </a>
