@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test \"test/**/*.test.ts\"",
     "guarded": "node --env-file-if-exists=.env src/guarded.ts",
-    "attack": "node --env-file-if-exists=.env src/attack.ts"
+    "attack": "node --env-file-if-exists=.env src/attack.ts",
+    "private": "node --env-file-if-exists=.env src/private.ts"
   },
   "dependencies": {
     "@near-js/accounts": "2.5.1",
@@ -20,6 +21,9 @@
     "@near-js/providers": "2.5.1",
     "@near-js/signers": "2.5.1",
     "@near-js/types": "2.5.1",
+    "@noble/ciphers": "1.3.0",
+    "@noble/curves": "1.9.1",
+    "@noble/hashes": "1.8.0",
     "@ramx/shared": "workspace:*",
     "@x402/core": "2.30.0",
     "@x402/fetch": "2.30.0",
