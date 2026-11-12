@@ -23,8 +23,8 @@ export default function Landing() {
   const [menu, setMenu] = useState(false);
   const session = useSession();
   const openChat = () => navigate("/chat");
-  // Logged in already → straight to the playground; otherwise World ID first.
-  const login = () => (session.me ? navigate("/chat") : session.openLogin("/chat"));
+  // Logged in already → straight to the playground; otherwise World ID or a NEAR wallet first.
+  const login = (method: "world" | "near") => (session.me ? navigate("/chat") : session.openLogin("/chat", method));
   return (
     <div className="landing">
       <header className="site-header">
@@ -210,10 +210,17 @@ export default function Landing() {
               Lend a laptop.
               <br />Use the whole network.
             </h2>
-            <button className="button button-blue" onClick={login}>
-              {session.me ? "Open the playground" : "Log in with World ID"}{" "}
-              <Icon name="arrow-up" size={17} />
-            </button>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              <button className="button button-blue" onClick={() => login("world")}>
+                {session.me ? "Open the playground" : "Log in with World ID"}{" "}
+                <Icon name="arrow-up" size={17} />
+              </button>
+              {!session.me && (
+                <button className="button" style={{ border: "1px solid #ffffff3d", background: "#ffffff08", color: "#dce6f5" }} onClick={() => login("near")}>
+                  <Icon name="wallet" size={17} /> Connect NEAR wallet
+                </button>
+              )}
+            </div>
           </div>
           <nav aria-label="Footer navigation">
             <span>TAKE A LOOK AROUND</span>
