@@ -95,6 +95,8 @@ export const GatewayEnv = z.preprocess(
     PRIVATE_POOLS: opt,
     /** Privacy: AES-256-GCM key for transcripts at rest (64 hex chars). Empty = plain text (MVP). */
     TRANSCRIPT_KEY: opt,
+    /** #6: "false" turns off swapping personal data for placeholders before prompts reach laptop pools (default on). */
+    PII_REDACTION: opt,
     /** Privacy: serve HTTPS with this certificate + key (PEM files). Both empty = HTTP (MVP). */
     TLS_CERT_FILE: opt,
     TLS_KEY_FILE: opt,

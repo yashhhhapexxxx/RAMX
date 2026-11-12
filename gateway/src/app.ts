@@ -17,7 +17,7 @@ import type { X402 } from "./x402.ts";
 import { ChainCheckError, escrowPayment, rpcTxLookup, walletTransfer, type NearTxLookup } from "./chain-credits.ts";
 import { nearNonceHandler, nearVerifyHandler, rpcKeyLookup, type NearKeyLookup } from "./near-auth.ts";
 import { teeCheckOf } from "./tee-judge.ts";
-import { nearAiFetch, teeAttestationOf } from "./nearai-upstream.ts";
+import { nearAiFetch, teeAttestationOf, teeSignatureOf } from "./nearai-upstream.ts";
 import { marketRoutes } from "./market.ts";
 import { payoutsFor } from "./settlement.ts";
 import { createPoolQueue, type PoolQueue } from "./queue.ts";
@@ -62,6 +62,11 @@ type RequestRow = {
   x402_payer: string | null; x402_tx: string | null; x402_amount: string | null; x402_asset: string | null; in_tokens: number | null; out_tokens: number | null;
   cost_mc: number | null; split: string | null; route: string | null; prompt_hash: string; resp_hash: string | null; ledger_seq: number | null; ledger_tx: string | null; attempts: string | null; route_source: "heartbeat" | "scheduler" | null; privacy: "trusted-ends" | "trusted-all" | "tee" | null; backend: "pool" | "near-ai-cloud" | null; ts: number;
 };
+
+/** True when the request's signed ledger event says it was end-to-end encrypted. */
+function e2eeOf(db: Db, reqId: string): boolean {
+  return !!db.prepare("SELECT 1 FROM ledger_events WHERE type IN ('request_settled', 'x402_payment') AND json_extract(payload, '$.req_id') = ? AND json_extract(payload, '$.e2ee') = 1").get(reqId);
+}
 
 export function createApp({ cfg, db, signer, x402 = null, worldFetch, directory, router: injectedRouter, queue: injectedQueue, onComplete = logCompletion, providerRelay = new ProviderRelay(), nearTx, nearKeys }: Deps): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
@@ -282,6 +287,8 @@ export function createApp({ cfg, db, signer, x402 = null, worldFetch, directory,
       attempts: r.attempts ? JSON.parse(r.attempts) : null,
       tee_check: teeCheckOf(db, id.data),
       tee_attestation: teeAttestationOf(db, id.data),
+      tee_signature: teeSignatureOf(db, id.data),
+      e2ee: e2eeOf(db, id.data),
     };
     return c.json(Receipt.parse(receipt));
   });

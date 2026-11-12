@@ -67,6 +67,20 @@ export function checkAttestation(report: unknown, nonce: string): { signingAddre
   return { signingAddress: m.signing_address!.toLowerCase(), sha256: `0x${sha256(JSON.stringify(report))}` };
 }
 
+/**
+ * #8: every TEE key a report attests with OUR nonce: the model instances and NEAR AI's own gateway
+ * (which signs streamed answers). Each must echo the nonce and carry an Intel TDX quote.
+ */
+export function attestedKeys(report: unknown, nonce: string): { model: string[]; gateway: string | null; sha256: string } {
+  const r = report as { gateway_attestation?: { request_nonce?: string; signing_address?: string; intel_quote?: string }; model_attestations?: ModelAttestation[] };
+  const ok = (a?: { request_nonce?: string; signing_address?: string; intel_quote?: string }) => !!a && a.request_nonce === nonce && !!a.intel_quote && /^0x[0-9a-fA-F]{40}$/.test(a.signing_address ?? "");
+  return {
+    model: (r.model_attestations ?? []).filter(ok).map((m) => m.signing_address!.toLowerCase()),
+    gateway: ok(r.gateway_attestation) ? r.gateway_attestation!.signing_address!.toLowerCase() : null,
+    sha256: `0x${sha256(JSON.stringify(report))}`,
+  };
+}
+
 export async function checkSignature(sig: { text: string; signature: string; signing_address: string }, attested: string, requestBody: string, responseBody: string): Promise<{ signatureOk: boolean; hashesMatch: boolean }> {
   let recovered = "";
   try {
@@ -75,7 +89,9 @@ export async function checkSignature(sig: { text: string; signature: string; sig
     recovered = "";
   }
   const signatureOk = recovered !== "" && recovered === sig.signing_address.toLowerCase() && recovered === attested;
-  return { signatureOk, hashesMatch: sig.text === `${sha256(requestBody)}:${sha256(responseBody)}` };
+  // NEAR AI signs "sha256(request):sha256(response)" for streamed answers and "<model>:sha256(request):sha256(response)" otherwise.
+  const pair = `${sha256(requestBody)}:${sha256(responseBody)}`;
+  return { signatureOk, hashesMatch: sig.text === pair || sig.text.endsWith(`:${pair}`) };
 }
 
 export const JUDGE_SYSTEM = "You audit an AI inference network. Given a user prompt and the answer a provider returned, decide whether the answer is a plausible, on-topic response by a competent language model (not garbage, not empty, not unrelated, not truncated nonsense). Reply with JSON only: {\"verdict\":\"plausible\"|\"implausible\",\"reason\":\"<one short sentence>\"}.";

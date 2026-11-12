@@ -15,7 +15,8 @@ import { exactRoute } from "./pools.ts";
 import { learnedNeed, MIN_ANSWER, pickMaxTokens } from "./budget.ts";
 import type { PoolQueue } from "./queue.ts";
 import type { Router, SelectedPool, SelectOptions } from "./router.ts";
-import { HASH_SALT_HEADER, isPrivacyMode, newSalt, PRIVACY_HEADER, PRIVACY_MODES, promptHashOf, saltedHash, seal, trustedAccounts } from "./privacy.ts";
+import { e2eeRequest, HASH_SALT_HEADER, isPrivacyMode, newSalt, PRIVACY_HEADER, PRIVACY_MODES, promptHashOf, saltedHash, seal, trustedAccounts } from "./privacy.ts";
+import { usesTools } from "./tools.ts";
 import type { X402 } from "./x402.ts";
 import { NEARAI_POOL_ID } from "./nearai-upstream.ts";
 
@@ -40,6 +41,10 @@ function payoutSnapshot(db: Db, route: Route | null): PayoutRoute | null {
     return { ...hop, owner_account: owner.account_id, payout_address: owner.payout_address };
   }) ?? null;
 }
+
+/** #6: swap personal data for placeholders when untrusted laptops will see the prompt (src/redact.ts). */
+export const redactFor = (cfg: Config, poolId: string, privacy: string | undefined): boolean =>
+  cfg.env.PII_REDACTION !== "false" && poolId !== NEARAI_POOL_ID && privacy !== "tee" && privacy !== "trusted-all";
 
 function insertRequest(db: Db, cfg: Config, row: { reqId: string; accountId: string | null; payer?: string; tx?: string; amount?: string; asset?: string; model: string; payType: "credits" | "x402"; route: Route | null; promptHash: string; prompt: string; seed: number; settings: string; salt: string; privacy: string | null; maxTokens: number; priceMultiplier: number | null }, now: number) {
   db.transaction(() => {
@@ -109,6 +114,12 @@ export function makePrepare(d: BillingDeps): Prepare {
     // Privacy (src/privacy.ts): route only to trusted nodes; store no transcript.
     const privacy = c.req.header(PRIVACY_HEADER);
     if (privacy !== undefined && !isPrivacyMode(privacy)) return errorResponse(c, 400, "bad_request", `${PRIVACY_HEADER} must be one of ${PRIVACY_MODES.join(", ")}`);
+    // End-to-end encryption: only to the enclave (tee); laptops cannot decrypt, so ciphertext never goes to a pool.
+    const e2ee = e2eeRequest((name) => c.req.header(name));
+    if (e2ee && "error" in e2ee) return errorResponse(c, 400, "bad_request", e2ee.error);
+    if (e2ee && privacy !== "tee") return errorResponse(c, 400, "bad_request", `end-to-end encryption needs ${PRIVACY_HEADER}: tee`);
+    if (e2ee && cfg.env.TOOLS_MODE === "emulate" && usesTools(req)) return errorResponse(c, 400, "bad_request", "end-to-end encryption cannot be combined with emulated tool calls");
+    const upstreamHeaders = e2ee ? e2ee.headers : undefined;
     const opts: SelectOptions = { accountId, ...(privacy ? { privacy: { mode: privacy, accounts: trustedAccounts(cfg, accountId) } } : {}) };
     // SPEC §16.3 routing preferences: pin a pool; require a minimum pool reliability.
     const pin = c.req.header("x-ramx-pool");
@@ -287,6 +298,8 @@ export function makePrepare(d: BillingDeps): Prepare {
           headers: { [HASH_SALT_HEADER]: salt, [MAX_TOKENS_HEADER]: String(maxTokens), [PRICE_HEADER]: priceHeader },
           coordinatorUrl: cur.coordinatorUrl,
           poolId: cur.poolId,
+          redact: redactFor(cfg, cur.poolId, privacy),
+          ...(upstreamHeaders ? { upstreamHeaders } : {}),
           failover,
           finish: trackedFinish((comp) => {
             const route = resolveRoute();
@@ -297,7 +310,7 @@ export function makePrepare(d: BillingDeps): Prepare {
                 // Commit billing, the transcript and its reliability outcome together. A later
                 // database failure must not leave a charged request marked as failed.
                 db.transaction(() => {
-                  const settled = settle(db, cfg.net, signer, { reqId, accountId, model, hold, inTokens: comp.usage!.prompt_tokens, outTokens: out.billed, route, promptHash: pHash, respHash: respHashOf(comp.text), priceMultiplier: price.multiplier, ...(agentId ? { key: { agentId, held: keyHeld } } : {}) });
+                  const settled = settle(db, cfg.net, signer, { reqId, accountId, model, hold, inTokens: comp.usage!.prompt_tokens, outTokens: out.billed, route, promptHash: pHash, respHash: respHashOf(comp.text), priceMultiplier: price.multiplier, ...(agentId ? { key: { agentId, held: keyHeld } } : {}), ...(privacy ? { privacy } : {}), ...(e2ee ? { e2ee: true } : {}) });
                   if (agentId) chargeAgent(db, agentId, reqId, settled.cost);
                   db.prepare("UPDATE transcripts SET response = ? WHERE req_id = ?").run(seal(cfg, comp.text), reqId);
                   countRouted(db, cfg, route, true);
@@ -329,6 +342,8 @@ export function makePrepare(d: BillingDeps): Prepare {
         headers: { ...paid.headers, [HASH_SALT_HEADER]: salt },
         coordinatorUrl: cur.coordinatorUrl,
         poolId: cur.poolId,
+        redact: redactFor(cfg, cur.poolId, privacy),
+        ...(upstreamHeaders ? { upstreamHeaders } : {}),
         failover,
         finish: trackedFinish((comp) => {
           const route = resolveRoute();
@@ -356,6 +371,8 @@ export function makePrepare(d: BillingDeps): Prepare {
                   pay: "x402",
                   prompt_hash: pHash as `0x${string}`,
                   resp_hash: respHash as `0x${string}`,
+                  ...(privacy ? { privacy } : {}),
+                  ...(e2ee ? { e2ee: true as const } : {}),
                 });
               })();
             } else {

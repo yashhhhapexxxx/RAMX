@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { canonicalJson } from "@ramx/shared";
+import { canonicalJson, E2EE_HEADERS } from "@ramx/shared";
 import type { Config } from "./config.ts";
 import type { Db } from "./db.ts";
 
@@ -90,4 +90,23 @@ export function tlsOptions(cfg: Config): { key: Buffer; cert: Buffer } | null {
   if (!cert && !keyFile) return null;
   if (!cert || !keyFile) throw new Error("set both TLS_CERT_FILE and TLS_KEY_FILE (or neither)");
   return { key: readFileSync(keyFile), cert: readFileSync(cert) };
+}
+
+// ---------- end-to-end encryption to the enclave ----------
+
+/**
+ * Client headers for NEAR model E2EE v2 (shared E2EE_HEADERS). Absent → null. Present → all required
+ * and well formed, returned as the headers to forward to NEAR AI Cloud; malformed → { error }.
+ * The gateway never decrypts: it relays ciphertext both ways.
+ */
+export function e2eeRequest(get: (name: string) => string | undefined): { headers: Record<string, string> } | { error: string } | null {
+  const H = E2EE_HEADERS;
+  const v = { algo: get(H.algo), clientKey: get(H.clientKey), modelKey: get(H.modelKey), version: get(H.version), allFields: get(H.allFields) };
+  if (!v.clientKey && !v.modelKey && !v.version && !v.algo) return null;
+  if (v.algo !== "ed25519") return { error: `${H.algo} must be ed25519` };
+  if (v.version !== "2") return { error: `${H.version} must be 2` };
+  if (!/^[0-9a-f]{64}$/i.test(v.clientKey ?? "")) return { error: `${H.clientKey} must be a 32-byte Ed25519 public key in hex` };
+  if (!/^[0-9a-f]{64}$/i.test(v.modelKey ?? "")) return { error: `${H.modelKey} must be the enclave's 32-byte Ed25519 public key in hex (from its attestation report)` };
+  if (v.allFields !== undefined && v.allFields !== "true") return { error: `${H.allFields} must be true when present` };
+  return { headers: { [H.algo]: "ed25519", [H.version]: "2", [H.clientKey]: v.clientKey!.toLowerCase(), [H.modelKey]: v.modelKey!.toLowerCase(), ...(v.allFields ? { [H.allFields]: "true" } : {}) } };
 }

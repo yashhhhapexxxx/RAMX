@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { randomInt } from "node:crypto";
 import { ChatCompletionRequest, REQUEST_ID_HEADER, Usage, type ModelConfig } from "@ramx/shared";
+import { redactMessages, restore, restoreSse } from "./redact.ts";
 import type { Config } from "./config.ts";
 import { errorResponse } from "./errors.ts";
 import { estimateInputTokens } from "./ledger.ts";
@@ -12,6 +13,8 @@ import type { StallTracker } from "./stall.ts";
 const MIN_OUTPUT = 256;
 /** Set when the gateway trimmed the prompt to fit the pool's context: number of messages cut or dropped. */
 export const TRIMMED_HEADER = "x-ramx-trimmed";
+/** #6: number of personal details the pool saw only as placeholders. */
+export const REDACTED_HEADER = "x-ramx-redacted";
 
 /** Why an attempt or a request failed. */
 export type FailReason = "pool_error" | "no_usage" | "client_aborted" | "stalled";
@@ -43,7 +46,7 @@ export type Failover = (f: { reason: Exclude<FailReason, "client_aborted">; stre
  * credit hold; no session → x402 settle. Returns a Response to stop (402/403/…), or extra response
  * headers (x402 PAYMENT-RESPONSE), the pool, `finish` (runs once with the completion) and `failover`.
  */
-export type Prepared = { headers: Record<string, string>; coordinatorUrl: string; poolId: string; finish: OnComplete; failover?: Failover; /** Answer cap picked for a credit request (budget.ts); else the asked one. */ maxTokens?: number };
+export type Prepared = { headers: Record<string, string>; coordinatorUrl: string; poolId: string; finish: OnComplete; failover?: Failover; /** Answer cap picked for a credit request (budget.ts); else the asked one. */ maxTokens?: number; /** #6: swap personal data for placeholders before the prompt reaches a laptop pool (src/redact.ts). */ redact?: boolean; /** Extra headers for the upstream request (end-to-end encryption to the enclave). */ upstreamHeaders?: Record<string, string> };
 export type Prepare = (c: Context, req: ChatCompletionRequest, model: ModelConfig, maxTokens: number, reqId: string) => Promise<Prepared | Response>;
 
 const withHeaders = (res: Response, headers: Record<string, string>): Response => {
@@ -105,7 +108,7 @@ export type PoolFetch = (url: URL, init: RequestInit) => Promise<Response>;
  * generation: POOL_TIMEOUT_MS for non-streaming (Parallax sends headers after the whole answer),
  * the first-token limit for streaming (Parallax sends stream headers at once; P5.1).
  */
-async function openUpstream(url: string, body: Record<string, unknown>, stream: boolean, headerMs: number, clientSignal: AbortSignal, poolFetch: PoolFetch): Promise<Attempt | OpenError> {
+async function openUpstream(url: string, body: Record<string, unknown>, stream: boolean, headerMs: number, clientSignal: AbortSignal, poolFetch: PoolFetch, reqId?: string, extraHeaders?: Record<string, string>): Promise<Attempt | OpenError> {
   // A client that left before we start: do not send the request at all.
   if (clientSignal.aborted) return { message: "client aborted before the pool request", stalled: false };
   // Once sent, the pool request is NOT tied to the client. Parallax 162354a crashes its last stage
@@ -117,7 +120,8 @@ async function openUpstream(url: string, body: Record<string, unknown>, stream: 
   try {
     const upstream = await poolFetch(new URL("/v1/chat/completions", url), {
       method: "POST",
-      headers: { "content-type": "application/json", accept: stream ? "text/event-stream" : "application/json" },
+      // The request id lets the NEAR AI upstream keep the exact bytes for the answer signature (#8).
+      headers: { "content-type": "application/json", accept: stream ? "text/event-stream" : "application/json", ...(reqId ? { [REQUEST_ID_HEADER]: reqId } : {}), ...extraHeaders },
       body: JSON.stringify(body),
       signal: abort.signal,
     });
@@ -187,10 +191,15 @@ export function chatHandler(cfg: Config, prepare: Prepare, stall: StallTracker, 
     const prep = await prepare(c, req, model, maxTokens, reqId);
     if (prep instanceof Response) return prep;
     if (prep.maxTokens !== undefined) maxTokens = prep.maxTokens;
-    const extra = { ...prep.headers, ...(fit.trimmed ? { [TRIMMED_HEADER]: String(fit.trimmed) } : {}) };
+    // #6: the pool sees placeholders; the client, the receipt hash and the transcript see the real text.
+    const red = prep.redact ? redactMessages(req.messages) : null;
+    const redacted = red && red.map.size > 0 ? red : null;
+    const sendReq: ChatCompletionRequest = redacted ? { ...req, messages: redacted.messages } : req;
+    const real = (text: string) => (redacted ? restore(text, redacted.map) : text);
+    const extra = { ...prep.headers, ...(fit.trimmed ? { [TRIMMED_HEADER]: String(fit.trimmed) } : {}), ...(redacted ? { [REDACTED_HEADER]: String(redacted.map.size) } : {}) };
     const clientSignal = c.req.raw.signal;
     const complete = (usage: Usage | null, text: string, ok: boolean, reason?: FailReason, streamedTokens = 0) =>
-      prep.finish({ reqId, model: req.model, usage, text, ok, ...(reason ? { reason } : {}), ...(streamedTokens ? { streamedTokens } : {}) });
+      prep.finish({ reqId, model: req.model, usage, text: real(text), ok, ...(reason ? { reason } : {}), ...(streamedTokens ? { streamedTokens } : {}) });
 
     // P5.8: with the pool hooks on, the gateway request ID rides along; the scheduler hook logs the
     // route under it and removes the field before the node backend sees it.
@@ -215,7 +224,7 @@ export function chatHandler(cfg: Config, prepare: Prepare, stall: StallTracker, 
     // Before any byte reaches the client, a failed attempt can start again from the beginning.
     let first: Attempt;
     for (;;) {
-      const a = await openUpstream(target.url, tag(upstreamBody(req, maxTokens, toolsMode)), !!req.stream, headerMs, clientSignal, poolFetch);
+      const a = await openUpstream(target.url, tag(upstreamBody(sendReq, maxTokens, toolsMode)), !!req.stream, headerMs, clientSignal, poolFetch, reqId, prep.upstreamHeaders);
       if (!isOpenError(a)) { first = a; break; }
       if (clientSignal.aborted) {
         complete(null, "", false, "client_aborted");
@@ -241,6 +250,9 @@ export function chatHandler(cfg: Config, prepare: Prepare, stall: StallTracker, 
           }
           if (usage.success) {
             complete(usage.data, text, true);
+            if (redacted) for (const ch of (body.choices ?? []) as { message?: { content?: unknown } }[]) {
+              if (typeof ch.message?.content === "string") ch.message.content = real(ch.message.content);
+            }
             // The response id is the gateway req_id (shared ChatCompletionResponse).
             const out = emulate ? rewriteCompletion(body) : body;
             return withHeaders(c.json({ ...out, id: reqId, model: req.model }), extra);
@@ -251,7 +263,7 @@ export function chatHandler(cfg: Config, prepare: Prepare, stall: StallTracker, 
         }
         // Nothing was sent to the client yet: a new attempt starts from the beginning.
         if (await nextTarget(failure.reason, 0)) {
-          const a = await openUpstream(target.url, tag(upstreamBody(req, maxTokens, toolsMode)), false, headerMs, clientSignal, poolFetch);
+          const a = await openUpstream(target.url, tag(upstreamBody(sendReq, maxTokens, toolsMode)), false, headerMs, clientSignal, poolFetch, reqId, prep.upstreamHeaders);
           if (!isOpenError(a)) { attempt = a; continue; }
           failure = { reason: "pool_error", message: a.message, text: "" };
         }
@@ -268,7 +280,7 @@ export function chatHandler(cfg: Config, prepare: Prepare, stall: StallTracker, 
       reopen: async (reason, partial, streamedTokens) => {
         // Retry until an attempt opens or the failover budget is used up.
         while (await nextTarget(reason, streamedTokens)) {
-          const a = await openUpstream(target.url, tag(continuationBody(req, maxTokens, partial, streamedTokens, toolsMode)), true, headerMs, clientSignal, poolFetch);
+          const a = await openUpstream(target.url, tag(continuationBody(sendReq, maxTokens, partial, streamedTokens, toolsMode)), true, headerMs, clientSignal, poolFetch, reqId, prep.upstreamHeaders);
           if (!isOpenError(a)) return a;
           reason = a.stalled ? "stalled" : "pool_error";
         }
@@ -276,7 +288,8 @@ export function chatHandler(cfg: Config, prepare: Prepare, stall: StallTracker, 
       },
       done: complete,
     });
-    return new Response(emulate ? toolStream(proxied) : proxied, {
+    const restored = redacted ? restoreSse(proxied, redacted.map) : proxied;
+    return new Response(emulate ? toolStream(restored) : restored, {
       status: 200,
       headers: {
         "content-type": "text/event-stream; charset=utf-8",

@@ -163,6 +163,10 @@ export type SettleInput = {
   priceMultiplier?: number;
   /** API key request: `held` of `hold` sits on the key's own bought credits. */
   key?: { agentId: string; held: number };
+  /** #7: privacy mode of the request, signed into the event. */
+  privacy?: "trusted-ends" | "trusted-all" | "tee";
+  /** End-to-end encrypted to the enclave, signed into the event. */
+  e2ee?: boolean;
 };
 
 export type SettleResult = { cost: number; split: CreditSplit; fromKey: number };
@@ -232,6 +236,8 @@ export function settle(db: Db, cfg: RamxConfig, signer: Signer, s: SettleInput, 
       ...(s.key ? { key_mc: fromKey } : {}),
       prompt_hash: s.promptHash as `0x${string}`,
       resp_hash: s.respHash as `0x${string}`,
+      ...(s.privacy ? { privacy: s.privacy } : {}),
+      ...(s.e2ee ? { e2ee: true as const } : {}),
     }, now);
     return { cost, split, fromKey };
   })();

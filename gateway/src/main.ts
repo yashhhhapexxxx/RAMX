@@ -18,7 +18,7 @@ import { nearSettlementChain } from "./payout-near.ts";
 import { legalGate } from "./legal.ts";
 import { createX402, httpFacilitator, localNearFacilitator } from "./x402.ts";
 import { nearAiClient, sampleForJudge, startTeeJudge } from "./tee-judge.ts";
-import { attestServed, NEARAI_POOL_ID, nearAiBase, nearAiFallbackOn } from "./nearai-upstream.ts";
+import { attestServed, NEARAI_POOL_ID, nearAiBase, nearAiFallbackOn, signServed } from "./nearai-upstream.ts";
 import { startMarket } from "./market.ts";
 import { maybeQueueVerification, startCanaryWorker, startVerificationWorker } from "./verification.ts";
 
@@ -120,7 +120,13 @@ const app = createApp({ cfg, db, signer, x402, router, queue, directory, onCompl
   // Judge mode: attest the NEAR AI model that served this answer (fresh nonce), off the request path.
   if (nearAi && completion.ok && completion.poolId === NEARAI_POOL_ID) {
     attestServed(db, cfg, nearAi, completion)
-      .then((a) => a && console.log(JSON.stringify({ msg: "tee_attested", req_id: completion.reqId, model: a.model, signing_address: a.signing_address })))
+      .then(async (a) => {
+        if (!a) return;
+        console.log(JSON.stringify({ msg: "tee_attested", req_id: completion.reqId, model: a.model, signing_address: a.signing_address }));
+        // #8: bind this exact answer to the attested key (NEAR AI's per-chat signature).
+        const s = await signServed(db, signer, nearAi, completion.reqId, a);
+        if (s) console.log(JSON.stringify({ msg: "tee_answer_signed", req_id: completion.reqId, ...s }));
+      })
       .catch((err) => console.warn(`tee attestation ${completion.reqId} failed: ${(err as Error).message}`));
   }
   if (completion.ok && verificationOn) {
