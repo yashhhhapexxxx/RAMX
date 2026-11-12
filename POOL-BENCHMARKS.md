@@ -3,6 +3,7 @@
 RAMX's distributed inference is not a simulation. The pools below were run by our team on our own laptops, connected over a local network with [Parallax](https://github.com/GradientHQ/parallax), each machine holding only a slice of the model's layers. Every number here was measured on those machines.
 
 **Where these numbers come from.** All runs were measured during this hackathon. 
+
 ## Hardware
 
 | Machine | Memory | Backend | Role |
@@ -33,4 +34,4 @@ RAMX's distributed inference is not a simulation. The pools below were run by ou
 
 ## Next
 
-- .We have already started onboarding campuse students laptops for testing our RAMX product and will move on forward to build something crazzier 
+-We have already started onboarding campus students laptops for testing our RAMX product and will move on forward to generating revenue  
