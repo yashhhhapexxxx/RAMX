@@ -23,6 +23,9 @@ import {
  * The same JSON (with sig) is stored in `ledger_events.payload`.
  */
 
+/** #7: privacy mode the request was served under (header x-ramx-privacy); absent = normal. Signed, so provable. */
+const RequestPrivacy = z.enum(["trusted-ends", "trusted-all", "tee"]);
+
 const base = {
   v: z.literal(1),
   ts: TimestampMs,
@@ -60,6 +63,9 @@ export const RequestSettledEvent = z.object({
   key_mc: Millicredits.optional(),
   prompt_hash: Hex32,
   resp_hash: Hex32,
+  privacy: RequestPrivacy.optional(),
+  /** The prompt and answer were end-to-end encrypted to the enclave: RAMX only relayed ciphertext. */
+  e2ee: z.literal(true).optional(),
 });
 
 /** An x402-paid request was served. Providers are paid in USDC at epoch close, from `route`. */
@@ -81,6 +87,9 @@ export const X402PaymentEvent = z.object({
   pay: z.literal("x402"),
   prompt_hash: Hex32,
   resp_hash: Hex32,
+  privacy: RequestPrivacy.optional(),
+  /** The prompt and answer were end-to-end encrypted to the enclave: RAMX only relayed ciphertext. */
+  e2ee: z.literal(true).optional(),
 });
 
 export const CreditsExpiredEvent = z.object({
@@ -249,6 +258,25 @@ export const TeeCheckEvent = z.object({
 });
 
 /**
+ * #8: an answer served by NEAR AI Cloud was signed inside a TEE. `signature_ok` = NEAR AI's per-chat
+ * signature recovers to a key attested with a fresh nonce (the model's, or NEAR AI's gateway's);
+ * `hashes_match` = the signed text is sha256(request bytes):sha256(response bytes) of this exact exchange.
+ */
+export const TeeAnswerSignedEvent = z.object({
+  ...base,
+  type: z.literal("tee_answer_signed"),
+  req_id: RequestId,
+  model: z.string(),
+  chat_id: z.string(),
+  signing_address: z.string().regex(/^0x[0-9a-f]{40}$/),
+  /** Which attested TEE key signed: the model instance, or NEAR AI's own gateway (streamed answers). */
+  signed_by: z.enum(["model", "nearai_gateway"]),
+  attestation_sha256: Hex32,
+  signature_ok: z.boolean(),
+  hashes_match: z.boolean(),
+});
+
+/**
  * Phase 7: one capacity-market round cleared for one model (swarm-sim/RULES.md). The full commit and
  * allocation lists are at GET /swarm/rounds/:id; their sha256 hashes are here.
  */
@@ -286,6 +314,7 @@ export const LedgerEvent = z.discriminatedUnion("type", [
   CreditsPurchasedEvent,
   TeeCheckEvent,
   SwarmClearedEvent,
+  TeeAnswerSignedEvent,
 ]);
 export type LedgerEvent = z.infer<typeof LedgerEvent>;
 export type LedgerEventType = LedgerEvent["type"];

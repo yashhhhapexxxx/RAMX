@@ -27,6 +27,12 @@ import { LedgerEvent } from "./ledger-events.ts";
 
 /** Set on every /v1/chat/completions response (streaming too). Use it with GET /requests/:id. */
 export const REQUEST_ID_HEADER = "x-ramx-request-id";
+/**
+ * End-to-end encryption to the NEAR AI Cloud enclave (NEAR model E2EE v2): the client encrypts each
+ * message to the enclave's attested Ed25519 key and the answer comes back encrypted to the client's
+ * key, so RAMX only ever relays ciphertext. Only with `x-ramx-privacy: tee`.
+ */
+export const E2EE_HEADERS = { algo: "x-signing-algo", clientKey: "x-client-pub-key", modelKey: "x-model-pub-key", version: "x-encryption-version", allFields: "x-encrypt-all-fields" } as const;
 /** EIP-191 personal_sign by the node key over the raw request body (POST /nodes/heartbeat). */
 export const NODE_SIGNATURE_HEADER = "x-ramx-node-signature";
 
@@ -197,6 +203,8 @@ export const ModelsResponse = z.object({
       source: z.enum(["gateway", "near-ai-cloud"]),
       /** Largest prompt + answer the serving pools take, tokens (minimum over their nodes). */
       context_length: z.number().int().positive().optional(),
+      /** NEAR AI Cloud model that serves `x-ramx-privacy: tee` for this id: attest it to encrypt end to end. */
+      tee_model: z.string().optional(),
       /** Current price; requests lock their own quote. */
       price: PriceQuote.optional(),
     }),
@@ -649,6 +657,10 @@ export const Receipt = z.object({
   tee_check: TeeCheck.nullable().optional(),
   /** Phase J: attestation of the NEAR AI model that served this request (null = served by a pool). */
   tee_attestation: TeeAttestation.nullable().optional(),
+  /** #8: NEAR AI's signature over this exact request and answer, checked against the attested key. */
+  /** The request was end-to-end encrypted to the enclave (from its signed ledger event). */
+  e2ee: z.boolean().optional(),
+  tee_signature: z.object({ chat_id: z.string(), signing_address: z.string(), signed_by: z.enum(["model", "nearai_gateway"]), signature_ok: z.boolean(), hashes_match: z.boolean() }).nullable().optional(),
   ts: TimestampMs,
 });
 export type Receipt = z.infer<typeof Receipt>;
