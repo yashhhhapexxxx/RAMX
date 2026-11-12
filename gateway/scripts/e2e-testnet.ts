@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Live end-to-end check on NEAR testnet against a RUNNING gateway. SPENDS TESTNET USDC.
- *   pnpm --filter @ramx/gateway e2e:testnet [--questions 2] [--wait-minutes 15] [--no-claim]
+ *   pnpm --filter @ramx/gateway e2e:testnet [--questions 2] [--wait-minutes 15] [--no-claim] [--model M]
  *
  * 1. agent-1 pays for questions with x402 (USDC on NEAR)       → payment tx
  * 2. the gateway writes signed events to the ledger contract   → ledger seq goes up, append tx
@@ -28,6 +28,8 @@ const { values } = parseArgs({ options: {
   questions: { type: "string", default: "2" },
   "wait-minutes": { type: "string", default: "15" },
   "no-claim": { type: "boolean", default: false },
+  /** Model the agent asks for; pick one your pool serves (default: the agent's own default). */
+  model: { type: "string" },
 } });
 const gatewayDir = resolve(import.meta.dirname, "..");
 const e = process.env;
@@ -78,7 +80,7 @@ console.log(`gateway ${gateway}, ledger ${ledger} seq ${seqBefore}`);
 // 1. x402 payments by the agent
 step(1, "agent pays with x402");
 if (!existsSync(agentEnv)) throw new Error(`no agent env file at ${agentEnv} (set AGENT_ENV)`);
-const agentOut = await run("src/agent.ts", ["--questions", values.questions!], resolve(gatewayDir, "../agent-client"), agentEnv);
+const agentOut = await run("src/agent.ts", ["--questions", values.questions!, ...(values.model ? ["--model", values.model] : [])], resolve(gatewayDir, "../agent-client"), agentEnv);
 const payTxs = [...agentOut.matchAll(/paid [0-9.]+ USDC, tx (\S+)/g)].map((m) => m[1]!);
 const reqIds = [...agentOut.matchAll(/\/requests\/(req_[0-9a-z]+)/g)].map((m) => m[1]!);
 if (payTxs.length === 0 || reqIds.length === 0) throw new Error("the agent made no paid request");
