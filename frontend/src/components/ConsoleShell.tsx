@@ -50,10 +50,10 @@ function SessionButton() {
   if (!s.me)
     return (
       <div className="login-choices">
-        <button className="button console-cta" onClick={() => s.openLogin(null, "near")} title="Log in with a NEAR testnet wallet. No starter credits: top up with USDC.">
+        <button className="button console-cta" onClick={() => s.openLogin(null, "near")} title={`Log in with a NEAR testnet wallet. A new account gets ${fmtNum(STARTER_CREDITS)} free starter credits.`}>
           <Icon name="wallet" size={14} /> Connect wallet
         </button>
-        <button className="button button-blue console-cta" onClick={() => s.openLogin(null, "world")} title={`World ID gives ${fmtNum(STARTER_CREDITS)} free starter credits, once per human.`}>
+        <button className="button button-blue console-cta" onClick={() => s.openLogin(null, "world")} title={`World ID: one human, one account, ${fmtNum(STARTER_CREDITS)} free starter credits.`}>
           <Icon name="user-check" size={14} /> Log in with World ID
           <span className="credits-tag">{fmtNum(STARTER_CREDITS / 1000)}k free credits</span>
         </button>

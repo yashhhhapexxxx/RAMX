@@ -46,7 +46,7 @@ function summary(e: LedgerEvent): string {
   const p = e.payload;
   switch (e.type) {
     case "account_created":
-      return "new account · one per World ID";
+      return "new account · World ID or NEAR wallet";
     case "starter_grant":
       return `+${cr(p.amount_mc, 0)} starter credits · 14 days`;
     case "request_settled": {

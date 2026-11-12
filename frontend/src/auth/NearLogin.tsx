@@ -1,7 +1,7 @@
 /* NEAR wallet login (NEP-413 signMessage). The gateway hands out a single-use nonce; the wallet
    signs {message, nonce, recipient}; the gateway checks the signature and that the key is a
-   full-access key of the account, then returns the usual session. A NEAR-only account gets no
-   starter credits (they need World ID). Popup wallets (Meteor) answer in place; redirect wallets
+   full-access key of the account, then returns the usual session. A new account gets starter
+   credits (daily cap on the gateway). Popup wallets (Meteor) answer in place; redirect wallets
    (MyNearWallet) come back to callbackUrl with the signature in the URL hash, which
    `completeNearRedirect` finishes on the next page load. Lazy-loaded with the login sheet. */
 import { useState } from "react";

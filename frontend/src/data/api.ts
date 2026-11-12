@@ -71,7 +71,7 @@ export interface PoolApi {
     verify(result: unknown): Promise<LoginResult>;
     /** NEAR wallet login (NEP-413): the message, nonce and recipient the wallet must sign. */
     nearNonce(): Promise<NearNonce>;
-    /** The wallet's signMessage result → session. NEAR-only accounts get no starter credits. */
+    /** The wallet's signMessage result → session. A new account gets starter credits (daily cap). */
     nearVerify(signed: NearSigned): Promise<LoginResult>;
   };
   me(token: string): Promise<Me>;

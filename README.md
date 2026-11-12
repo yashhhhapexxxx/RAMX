@@ -38,7 +38,7 @@ flowchart TD
     Market -.->|results| Ledger
 ```
 
-- **World ID** gives starter credits, once per verified human, and backs budgeted API keys. **NEAR wallets** (Meteor, MyNearWallet) log in with a signed NEP-413 message; the gateway checks on chain that the key is a full-access key of the account. Wallet logins get no starter credits: they top up with USDC.
+- **World ID** (one account per verified human) and **NEAR wallets** (Meteor, MyNearWallet) both log in. A wallet signs a NEP-413 message (no transaction) and the gateway checks on chain that the key is a full-access key of the account. A new account gets 10,000 starter credits (14 days); `STARTER_DAILY_GRANTS` caps how many new accounts get them per day, so free testnet accounts cannot drain the pool. Accounts also back budgeted API keys.
 - **Discovery** comes from signed node heartbeats inside the gateway. Routing checks fresh heartbeats, reliability and layer coverage.
 - **SQLite + NEAR** handle atomic credit holds, usage settlement and an asynchronous signed audit trail on `ledger-v2.ramx.testnet`. Credits split 90% to serving nodes by layers, 5% burn and 5% reserve. 80% of x402 USDC income goes to providers each epoch: the treasury funds and posts a Merkle root in one `ft_transfer_call`, and each provider claims its own leaf.
 - **Guarded agents.** An agent account can hold only a function-call key for `escrow.pay`. The escrow contract enforces the owner's policy on chain: allowed payees, a per-call maximum, a total budget and a pause switch. A prompt-injected agent cannot pay anyone else, overspend or change its own limits.

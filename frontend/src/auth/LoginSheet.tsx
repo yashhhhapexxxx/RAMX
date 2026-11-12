@@ -83,12 +83,12 @@ export default function LoginSheet() {
       <div className="login-body">
         {s.method !== "near" && (
           <p className="muted">
-            One human, one account. <strong>Only World ID gives starter credits:</strong> a new account gets {fmtNum(STARTER_CREDITS)} credits (valid for 14 days) to spend on any pool. Verify with the Orb or Selfie Check. To earn more, link a laptop and serve layers.
+            One human, one account. A new account gets <strong>{fmtNum(STARTER_CREDITS)} free credits</strong> (valid for 14 days) to spend on any pool. Verify with the Orb or Selfie Check, or connect a NEAR wallet. To earn more, link a laptop and serve layers.
           </p>
         )}
         {s.method === "near" && (
           <p className="login-note" role="note">
-            <Icon name="coins" size={13} /> Free credits only by proving you're a human with a World ID scan.
+            <Icon name="coins" size={13} /> A new account gets {fmtNum(STARTER_CREDITS)} free credits (valid for 14 days).
           </p>
         )}
 
@@ -98,18 +98,18 @@ export default function LoginSheet() {
             <div>
               {outcome.result.created && outcome.result.me.balance.starter === 0 ? (
                 <>
-                  <h3>Welcome. Your NEAR account is linked.</h3>
-                  <p className="muted">No starter credits for wallet-only accounts (those need World ID). Top up with USDC on the Credits page.</p>
+                  <h3>Welcome. Your account is ready.</h3>
+                  <p className="muted">Today's free starter credits are used up. Top up with USDC on the Credits page, or come back tomorrow.</p>
                 </>
               ) : outcome.result.created ? (
                 <>
-                  <h3>Welcome. {fmtNum(STARTER_CREDITS)} starter credits.</h3>
+                  <h3>Welcome. {fmtNum(outcome.result.me.balance.starter)} starter credits.</h3>
                   <p className="muted">Your account is ready. The grant is recorded on the ledger.</p>
                 </>
               ) : (
                 <>
                   <h3>Already registered.</h3>
-                  <p className="muted">This human already has an account. You are logged in to it. No new starter credits.</p>
+                  <p className="muted">This account already exists. You are logged in to it. No new starter credits.</p>
                 </>
               )}
               <p className="faint mono">{outcome.result.me.account_id}</p>
@@ -152,7 +152,7 @@ export default function LoginSheet() {
 
         {outcome?.kind !== "ok" && s.method !== "world" && (
           <div className="world-actions">
-            <p className="muted">{s.method === "near" ? "Log in" : "Or log in"} with a NEAR testnet wallet (Meteor, MyNearWallet). The wallet signs a login message; no transaction.{s.method === "near" ? "" : " No starter credits: those need World ID; top up with USDC instead."}</p>
+            <p className="muted">{s.method === "near" ? "Log in" : "Or log in"} with a NEAR testnet wallet (Meteor, MyNearWallet). The wallet signs a login message; no transaction, no fee.</p>
             <NearLogin onLogin={(r) => { s.login(r); setOutcome({ kind: "ok", result: r }); }} onError={(message) => setOutcome({ kind: "error", message })} />
           </div>
         )}
