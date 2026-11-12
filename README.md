@@ -139,7 +139,7 @@ Real laptops, real runs: each pool below was run by our team on our own machines
 | 3 | **2** · M4 + RTX 4060 | Qwen3-14B | M4: layers 0–28 → 4060: layers 29–39 | **5.2–6.0 tok/s** · first token 0.65–1.2 s | Apple + NVIDIA run one model **neither laptop can run alone** |
 | 4 | **3** · M4 + M5 + RTX 4060 | Qwen3-14B | M4: 0–13 → M5: 14–28 → 4060: 29–39 | **7.92 tok/s** (median) · first token 0.43 s | Three-laptop pipeline, 5 of 5 runs passed |
 | 5 | **1** · RTX 4060 with llama.cpp (reference, not a pool) | Qwen2.5-7B (4-bit) | whole model | **53.5 tok/s** | The single-GPU speed limit, for comparison |
-| 6 | **GPU Pool on NEAR testnet** | Qwen3-8B | chosen by Parallax | 3 paid answers | Paid with x402 ([Gpxq3h…](https://testnet.nearblocks.io/txns/Gpxq3hxD4JVWvgmAS2Ps6Y4j4DG2CyQWoSssWYvzk1j3)), ledger events #24–26 verified, provider payout claimed ([B8ZaniL…](https://testnet.nearblocks.io/txns/B8ZaniLqcTAva9EoWiLuDZv1iqvfSi1dQVsxPhQhGPqK)) |
+| 6 | **GPU Pools on NEAR** | Qwen3-8B | chosen by Parallax | 3 paid answers | Paid with x402 ([Gpxq3h…](https://testnet.nearblocks.io/txns/Gpxq3hxD4JVWvgmAS2Ps6Y4j4DG2CyQWoSssWYvzk1j3)), ledger events #24–26 verified, provider payout claimed ([B8ZaniL…](https://testnet.nearblocks.io/txns/B8ZaniLqcTAva9EoWiLuDZv1iqvfSi1dQVsxPhQhGPqK)) |
 
 *tok/s = tokens generated per second. Layer numbers are the model layers each laptop holds (Qwen3-14B has 40).*
 
