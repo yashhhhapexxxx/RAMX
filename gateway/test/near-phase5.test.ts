@@ -8,7 +8,7 @@ import { openDb, type Db } from "../src/db.ts";
 import { createApp } from "../src/app.ts";
 import { availableMc } from "../src/ledger.ts";
 import { createAgentKey } from "../src/incentives.ts";
-import { nep413Hash, verifyNep413, type NearKeyLookup } from "../src/near-auth.ts";
+import { nearLoginOrCreate, nep413Hash, verifyNep413, type NearKeyLookup } from "../src/near-auth.ts";
 import type { NearTxLookup } from "../src/chain-credits.ts";
 import { signer, testAccount, TEST_JWT_SECRET } from "./helpers.ts";
 
@@ -57,7 +57,7 @@ test("NEP-413: a wallet signature over the gateway nonce verifies; any other mes
   assert.equal(verifyNep413(pk, sigCb, "Log in to RAMX", nonce, "ramx"), false);
 });
 
-test("NEAR login: nonce → signed → session; no starter credits; payout = the NEAR account; nonce single use; FC keys refused", async () => {
+test("NEAR login: nonce → signed → session; starter credits; payout = the NEAR account; nonce single use; FC keys refused", async () => {
   const kp = KeyPair.fromRandom("ed25519");
   const fc = KeyPair.fromRandom("ed25519");
   const pk = kp.getPublicKey().toString();
@@ -72,19 +72,34 @@ test("NEAR login: nonce → signed → session; no starter credits; payout = the
     const r = await app.request("/auth/near/verify", json(body));
     assert.equal(r.status, 200, await r.clone().text());
     const v = NearVerifyResponse.parse(await r.json());
-    assert.deepEqual([v.new_account, v.starter_granted_mc, v.near_account], [true, 0, "alice.testnet"]);
+    assert.deepEqual([v.new_account, v.starter_granted_mc, v.near_account], [true, 10_000_000, "alice.testnet"]);
     const me = MeResponse.parse(await (await app.request("/me", { headers: { authorization: `Bearer ${v.token}` } })).json());
     assert.equal(me.payout_address, "alice.testnet");
-    assert.equal(me.balance.starter_mc, 0, "starter credits need a World proof");
+    assert.equal(me.balance.starter_mc, 10_000_000, "a new NEAR account gets starter credits");
+    assert.equal(events(db, "starter_grant").length, 1);
 
     assert.equal((await app.request("/auth/near/verify", json(body))).status, 401, "replayed nonce");
     const again = NearVerifyResponse.parse(await (await app.request("/auth/near/verify", json(await signed(kp)))).json());
-    assert.deepEqual([again.account_id, again.new_account], [v.account_id, false], "same wallet, same account");
+    assert.deepEqual([again.account_id, again.new_account, again.starter_granted_mc], [v.account_id, false, 0], "same wallet, same account, no second grant");
     const fcr = await app.request("/auth/near/verify", json(await signed(fc)));
     assert.equal(fcr.status, 401);
     assert.match(await fcr.text(), /function-call key/);
     const other = await signed(kp);
     assert.equal((await app.request("/auth/near/verify", json({ ...other, account_id: "bob.testnet" }))).status, 401, "key of another account");
+  } finally { db.close(); }
+});
+
+test("NEAR login: STARTER_DAILY_GRANTS caps starter grants per rolling 24 h", () => {
+  const capped = loadConfig({ DATABASE_PATH: ":memory:", POOL_COORDINATOR_URL: "http://127.0.0.1:3001", JWT_SECRET: TEST_JWT_SECRET, STARTER_DAILY_GRANTS: "2" });
+  const db = openDb(":memory:");
+  try {
+    const t0 = Date.now();
+    const got = ["a", "b", "c"].map((n) => nearLoginOrCreate(db, capped, signer, `${n}.testnet`, t0).starterGrantedMc);
+    assert.deepEqual(got, [10_000_000, 10_000_000, 0], "third new account today gets nothing");
+    assert.equal(events(db, "starter_grant").length, 2);
+    assert.equal(events(db, "account_created").length, 3);
+    const late = nearLoginOrCreate(db, capped, signer, "d.testnet", t0 + 86_400_001);
+    assert.equal(late.starterGrantedMc, 10_000_000, "the window rolls over after 24 h");
   } finally { db.close(); }
 });
 

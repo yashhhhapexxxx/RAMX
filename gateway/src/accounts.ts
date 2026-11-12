@@ -13,24 +13,41 @@ export const contributionRatio = (earnedMc: number, spentMc: number): number => 
 
 export type LoginResult = { accountId: string; newAccount: boolean; starterGrantedMc: number };
 
+const DAY_MS = 86_400_000;
+
 /**
- * One account per World nullifier (SPEC §6.2–6.3). New nullifier → account + starter credits
- * (STARTER_CREDITS credits → mc, expiry STARTER_EXPIRY_DAYS) + account_created + starter_grant
- * events, all in one transaction. Existing nullifier → the same account, no credits.
- * The UNIQUE constraint on world_nullifier makes a race between two logins safe.
+ * Balance row + account_created (+ starter_grant) for a freshly inserted account. Call inside the
+ * creating transaction. Starter credits: STARTER_CREDITS credits → mc, expiry STARTER_EXPIRY_DAYS.
+ * STARTER_DAILY_GRANTS (optional) caps how many new accounts (World ID or NEAR wallet) get them per
+ * rolling 24 h: testnet NEAR accounts are free to create, so the cap bounds what farming can take. Over the cap the
+ * account starts at 0 and can top up with USDC. Returns the granted mc.
  */
-export function loginOrCreate(db: Db, cfg: Config, signer: Signer, nullifier: string, now = Date.now()): LoginResult {
+export function openAccount(db: Db, cfg: Config, signer: Signer, id: string, now: number): number {
+  const cap = cfg.env.STARTER_DAILY_GRANTS;
+  const grantedToday = cap === undefined ? 0 : (db
+    .prepare("SELECT COUNT(*) AS n FROM accounts a JOIN balances b ON b.account_id = a.id WHERE a.created_at > ? AND b.starter_expires_at IS NOT NULL")
+    .get(now - DAY_MS) as { n: number }).n;
+  const amount = cap !== undefined && grantedToday >= cap ? 0 : (cfg.env.STARTER_CREDITS ?? 10_000) * 1000;
+  const expires = amount > 0 ? now + (cfg.env.STARTER_EXPIRY_DAYS ?? 14) * DAY_MS : null;
+  db.prepare("INSERT INTO balances (account_id, starter_mc, starter_expires_at) VALUES (?, ?, ?)").run(id, amount, expires);
+  recordEvent(db, signer, { type: "account_created", account_id: id as `acc_${string}` }, now);
+  if (expires !== null) recordEvent(db, signer, { type: "starter_grant", account_id: id as `acc_${string}`, amount_mc: amount, expires_at: expires }, now);
+  return amount;
+}
+
+/**
+ * One account per World nullifier (SPEC §6.2–6.3; dev scripts use `dev:<label>` keys). New key →
+ * account + starter credits (openAccount), all in one transaction. Existing key → the same account,
+ * no credits. The UNIQUE constraint on world_nullifier makes a race between two logins safe.
+ * NEAR wallet logins use nearLoginOrCreate (near-auth.ts).
+ */
+export function loginOrCreate(db: Db, cfg: Config, signer: Signer, key: string, now = Date.now()): LoginResult {
   return db.transaction((): LoginResult => {
-    const existing = db.prepare("SELECT id FROM accounts WHERE world_nullifier = ?").get(nullifier) as { id: string } | undefined;
+    const existing = db.prepare("SELECT id FROM accounts WHERE world_nullifier = ?").get(key) as { id: string } | undefined;
     if (existing) return { accountId: existing.id, newAccount: false, starterGrantedMc: 0 };
     const id = newAccountId();
-    const amount = (cfg.env.STARTER_CREDITS ?? 10_000) * 1000;
-    const expires = now + (cfg.env.STARTER_EXPIRY_DAYS ?? 14) * 86_400_000;
-    db.prepare("INSERT INTO accounts (id, world_nullifier, payout_address, created_at) VALUES (?, ?, NULL, ?)").run(id, nullifier, now);
-    db.prepare("INSERT INTO balances (account_id, starter_mc, starter_expires_at) VALUES (?, ?, ?)").run(id, amount, expires);
-    recordEvent(db, signer, { type: "account_created", account_id: id as `acc_${string}` }, now);
-    recordEvent(db, signer, { type: "starter_grant", account_id: id as `acc_${string}`, amount_mc: amount, expires_at: expires }, now);
-    return { accountId: id, newAccount: true, starterGrantedMc: amount };
+    db.prepare("INSERT INTO accounts (id, world_nullifier, payout_address, created_at) VALUES (?, ?, NULL, ?)").run(id, key, now);
+    return { accountId: id, newAccount: true, starterGrantedMc: openAccount(db, cfg, signer, id, now) };
   })();
 }
 

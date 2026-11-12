@@ -42,6 +42,8 @@ services:
         value: "10000"
       - key: STARTER_EXPIRY_DAYS
         value: "14"
+      - key: STARTER_DAILY_GRANTS
+        value: "200"
       - key: WORLD_ENVIRONMENT
         value: staging
       - key: WORLD_APP_ID

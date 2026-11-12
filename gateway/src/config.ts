@@ -41,6 +41,8 @@ export const GatewayEnv = z.preprocess(
     WORLD_SIMULATOR_DEVICE_ACCOUNTS: opt,
     STARTER_CREDITS: z.coerce.number().int().nonnegative().optional(),
     STARTER_EXPIRY_DAYS: z.coerce.number().int().positive().optional(),
+    /** Max new accounts per rolling 24 h that get starter credits (unset = no cap). */
+    STARTER_DAILY_GRANTS: z.coerce.number().int().nonnegative().optional(),
     /** Gateway's own NEAR account (ed25519 key): writes the ledger contract. Testnet only. */
     NEAR_GATEWAY_ACCOUNT_ID: opt,
     NEAR_GATEWAY_KEY: opt,

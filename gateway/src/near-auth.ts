@@ -6,8 +6,8 @@ import type { Config } from "./config.ts";
 import type { Db } from "./db.ts";
 import { issueToken } from "./auth.ts";
 import { errorResponse } from "./errors.ts";
-import { recordEvent, type Signer } from "./events.ts";
-import { newAccountId } from "./accounts.ts";
+import type { Signer } from "./events.ts";
+import { newAccountId, openAccount } from "./accounts.ts";
 import { nearProvider } from "./near.ts";
 
 /**
@@ -16,7 +16,7 @@ import { nearProvider } from "./near.ts";
  *   POST /auth/near/verify → checks the ed25519 signature over the NEP-413 payload, that the
  *                            nonce is ours, unused and fresh, and (on RPC) that the public key is a
  *                            FULL-ACCESS key of the account. Then logs in / creates the account.
- * A NEAR-only account gets NO starter credits (they need a World proof); its payout account
+ * A new account gets starter credits (capped per day by STARTER_DAILY_GRANTS); its payout account
  * defaults to the logged-in NEAR account.
  */
 
@@ -68,16 +68,14 @@ export function verifyNep413(publicKey: string, signatureB64: string, message: s
   }
 }
 
-/** Find or create the account for a NEAR wallet. No starter credits here. */
-export function nearLoginOrCreate(db: Db, signer: Signer, nearAccount: string, now = Date.now()): { accountId: string; newAccount: boolean } {
+/** Find or create the account for a NEAR wallet. A new account gets starter credits (openAccount, daily cap). */
+export function nearLoginOrCreate(db: Db, cfg: Config, signer: Signer, nearAccount: string, now = Date.now()): { accountId: string; newAccount: boolean; starterGrantedMc: number } {
   return db.transaction(() => {
     const existing = db.prepare("SELECT id FROM accounts WHERE near_account = ?").get(nearAccount) as { id: string } | undefined;
-    if (existing) return { accountId: existing.id, newAccount: false };
+    if (existing) return { accountId: existing.id, newAccount: false, starterGrantedMc: 0 };
     const id = newAccountId();
     db.prepare("INSERT INTO accounts (id, world_nullifier, near_account, payout_address, created_at) VALUES (?, ?, ?, ?, ?)").run(id, `near:${nearAccount}`, nearAccount, nearAccount, now);
-    db.prepare("INSERT INTO balances (account_id, starter_mc, starter_expires_at) VALUES (?, 0, NULL)").run(id);
-    recordEvent(db, signer, { type: "account_created", account_id: id as `acc_${string}` }, now);
-    return { accountId: id, newAccount: true };
+    return { accountId: id, newAccount: true, starterGrantedMc: openAccount(db, cfg, signer, id, now) };
   })();
 }
 
@@ -110,8 +108,8 @@ export function nearVerifyHandler(db: Db, cfg: Config, signer: Signer, keyLookup
     }
     if (perm === null) return errorResponse(c, 401, "unauthorized", `${public_key} is not a key of ${account_id}`);
     if (perm !== "FullAccess") return errorResponse(c, 401, "unauthorized", `${public_key} is a function-call key of ${account_id}; log in with a full-access key`);
-    const login = nearLoginOrCreate(db, signer, account_id);
+    const login = nearLoginOrCreate(db, cfg, signer, account_id);
     const token = await issueToken(cfg.env.JWT_SECRET!, login.accountId, cfg.net.session_ttl_s);
-    return c.json(NearVerifyResponse.parse({ token, account_id: login.accountId, near_account: account_id, new_account: login.newAccount, starter_granted_mc: 0 }));
+    return c.json(NearVerifyResponse.parse({ token, account_id: login.accountId, near_account: account_id, new_account: login.newAccount, starter_granted_mc: login.starterGrantedMc }));
   };
 }

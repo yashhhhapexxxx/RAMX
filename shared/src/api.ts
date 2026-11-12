@@ -396,7 +396,7 @@ export const NearVerifyResponse = z.object({
   account_id: AccountId,
   near_account: NearAccountId,
   new_account: z.boolean(),
-  /** Always 0: starter credits need a World ID proof (POST /auth/world/verify while logged in). */
+  /** Starter credits granted to a new account (0 for an existing one, or when the daily cap is reached). */
   starter_granted_mc: Millicredits,
 });
 export type NearVerifyResponse = z.infer<typeof NearVerifyResponse>;
