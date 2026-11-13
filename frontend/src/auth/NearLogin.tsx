@@ -10,6 +10,26 @@ import { setupWalletSelector } from "@near-wallet-selector/core";
 import { setupModal } from "@near-wallet-selector/modal-ui";
 import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
 import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
+import { setupHereWallet } from "@near-wallet-selector/here-wallet";
+import { setupSender } from "@near-wallet-selector/sender";
+import { setupNightly } from "@near-wallet-selector/nightly";
+import { setupIntearWallet } from "@near-wallet-selector/intear-wallet";
+import { setupHotWallet } from "@near-wallet-selector/hot-wallet";
+import { setupOKXWallet } from "@near-wallet-selector/okx-wallet";
+import { setupCoin98Wallet } from "@near-wallet-selector/coin98-wallet";
+import { setupWelldoneWallet } from "@near-wallet-selector/welldone-wallet";
+import { setupNearSnap } from "@near-wallet-selector/near-snap";
+import { setupLedger } from "@near-wallet-selector/ledger";
+
+/**
+ * Every wallet module that can sign a NEP-413 login message on testnet. Left out on purpose: Math and
+ * Bitte (no working message signing), Arepa (message signing unsupported), Unity and WalletConnect
+ * (need a WalletConnect project id), NEAR Mobile (heavy native build tools).
+ */
+const walletModules = () => [
+  setupMeteorWallet(), setupMyNearWallet(), setupHereWallet(), setupSender(), setupNightly(), setupIntearWallet(),
+  setupHotWallet(), setupOKXWallet(), setupCoin98Wallet(), setupWelldoneWallet(), setupNearSnap(), setupLedger(),
+];
 import "@near-wallet-selector/modal-ui/styles.css";
 import { api } from "../data";
 import type { LoginResult, NearNonce } from "../data";
@@ -50,7 +70,7 @@ export default function NearLogin({ onLogin, onError }: { onLogin: (r: LoginResu
     setBusy(true);
     try {
       const n: NearNonce = await api.auth.nearNonce();
-      const selector = await setupWalletSelector({ network: "testnet", modules: [setupMeteorWallet(), setupMyNearWallet()] });
+      const selector = await setupWalletSelector({ network: "testnet", modules: walletModules() });
       const modal = setupModal(selector, { contractId: "", description: "Log in to RAMX with your NEAR testnet account. No transaction, no fee: the wallet only signs a login message." });
       // A wallet connected in an earlier attempt stays selected: go straight to signing.
       const walletId = selector.store.getState().selectedWalletId ?? await new Promise<string>((resolve, reject) => {
