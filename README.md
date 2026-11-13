@@ -145,6 +145,16 @@ Configure `gateway/.env` with your World ID app, JWT/signing key, NEAR accounts 
 | Treasury posts the epoch payout (Merkle root + USDC) | [E7xsCi…](https://testnet.nearblocks.io/txns/E7xsCinFzbNFKCgSobtUQcF5mxKhK2tqwUPwYFG742pD) |
 | Provider claims its share with a Merkle proof (80% of the x402 income → `provider-1.ramx.testnet`) | [2MojW4…](https://testnet.nearblocks.io/txns/2MojW4wAUr7SWR46cdmd4eNfwA3Qo53dc35onPHquEdC) |
 
+### The full cycle, repeated
+
+The whole loop, where agents pay with x402, a laptop pool answers, the ledger records it, the treasury posts the epoch and the provider claims its USDC, ran three separate times. Every epoch was fully claimed (4800 of 4800 units each, 80% of the 0.006 USDC paid).
+
+| Run | Agent payments (pool-served) | Epoch payout posted | Provider claim |
+|---|---|---|---|
+| **Run 1** | [Gpxq3h…](https://testnet.nearblocks.io/txns/Gpxq3hxD4JVWvgmAS2Ps6Y4j4DG2CyQWoSssWYvzk1j3), [DtrZwH…](https://testnet.nearblocks.io/txns/DtrZwHJwdg62Xd6K6T4Lo29zt5GqtZKbGFgV6urXG1pd), [TSu5Cy…](https://testnet.nearblocks.io/txns/TSu5CyYnuLC8G4wAFmkPR1h3DJytX42LJ1rggfgUmfc) | [AuYYgQ…](https://testnet.nearblocks.io/txns/AuYYgQ1kdt1wU5NGxmEt8Ah3mi5fTDMQyqb2qoVh4wRw) | [B8Zani…](https://testnet.nearblocks.io/txns/B8ZaniLqcTAva9EoWiLuDZv1iqvfSi1dQVsxPhQhGPqK) |
+| **Run 2** | [BqXdpr…](https://testnet.nearblocks.io/txns/BqXdpr8KBUon4QSAC3oF9ByM9dcHH3vn97G9QuYWzpcf), [9v5hjY…](https://testnet.nearblocks.io/txns/9v5hjYeHTxqcX9SqXEi3oMJnVLf6f5GMpEnvq5aDw9K1), [CoxR4z…](https://testnet.nearblocks.io/txns/CoxR4zttVg2BLA7eykfs4swxeCzSUztTNuvEcQPx69aw) | [ALznCv…](https://testnet.nearblocks.io/txns/ALznCvBs2YqV3FHuNHzH3wYeFvczha4ZAwvAzspj1uBB) | [59jHuV…](https://testnet.nearblocks.io/txns/59jHuVDEJqiWqPw5eR76hjubuqQqRSQuQA3bKJ74T6Hd) |
+| **Run 3 (recorded in the demo video)** | [CdHtTp…](https://testnet.nearblocks.io/txns/CdHtTp8EiMx1Yr5aRNLdwDceykVERCEfbTMpNFCJmeYJ), [Fcs6Ax…](https://testnet.nearblocks.io/txns/Fcs6Ax8JEPB3j8ba9tVWTKoMhvh6uyye1F9unhnTm8C7), [FyRRhz…](https://testnet.nearblocks.io/txns/FyRRhzguo7LUjKWbMTmUe69uqDxnmi3qS2QEJajhXqZu) | [E7xsCi…](https://testnet.nearblocks.io/txns/E7xsCinFzbNFKCgSobtUQcF5mxKhK2tqwUPwYFG742pD) | [2MojW4…](https://testnet.nearblocks.io/txns/2MojW4wAUr7SWR46cdmd4eNfwA3Qo53dc35onPHquEdC) |
+
 ## Pool benchmarks
 
 Real laptops, real runs: each pool below was run by our team on our own machines over a local network with Parallax, each laptop holding only a slice of the model's layers. All the test runs are made during the hackathon period and a proof on NEAR testnet with  payment and payout on chain. Hardware, method and lessons: [POOL-BENCHMARKS.md](POOL-BENCHMARKS.md).
