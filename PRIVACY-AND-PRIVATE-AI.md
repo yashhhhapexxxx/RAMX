@@ -70,7 +70,7 @@ It confirms that the public receipt holds no text and no salt; recomputes the pr
 | `tee` request on the hosted gateway | Served in secure hardware with attestation; caller recomputed both salted hashes; the ledger event contains no text. Payment [GWcfcW…](https://testnet.nearblocks.io/txns/GWcfcW9BQF8q59UernT5zcc8utbH4m9fymNpyX1NtQg), ledger event [Cmsm3o…](https://testnet.nearblocks.io/txns/Cmsm3oEZxPbhiQK2DmrFTmHD8rvJozLRuQA5sBMi8L9g) |
 | `trusted-all` with no trusted laptop online | Sent to secure hardware instead of an untrusted laptop. Payment [4Tbba2…](https://testnet.nearblocks.io/txns/4Tbba2xTADjtnE8KCC1PVDcjg6UAehNktecnC4ssQ36b), ledger event [BjBAz9…](https://testnet.nearblocks.io/txns/BjBAz9RrLiLJuCwaNSjkpnTAYQ2xvapcGabHs3HVnQdm) |
 | Self-check run | All 11 checks passed on the user's machine. Ledger event [6EsV1Y…](https://testnet.nearblocks.io/txns/6EsV1YRJGcyuPdtrN6BHiML7vgQexXzdDnBYcnqi8fxD) |
-| End-to-end encrypted run through the gateway | The prompt's words appeared nowhere in the gateway's database or logs; the answer was decrypted only on the client; the enclave's signature covered the exact encrypted request and answer |
+| End-to-end encrypted request on the hosted gateway | The client attested the enclave, RAMX relayed only ciphertext, the answer was decrypted on the client; the signed ledger event says `e2ee: true` and contains no text; the enclave's signature over the exact bytes is valid; all 16 self-checks passed. Payment [HJTFzc…](https://testnet.nearblocks.io/txns/HJTFzcamXQFZ8pm4DxS3U2vgy8bsSDqTBHtibLWP4pRH), ledger event [yhGjQC…](https://testnet.nearblocks.io/txns/yhGjQC65PQGnE17wmZuC7auC8mypBpHnbZCfudrj9rR) |
 
 ## Limits
 
