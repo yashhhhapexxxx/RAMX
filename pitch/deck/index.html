@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RAMX Pitch</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23070a10%27/%3E%3Cpath d=%27M16 8v16M8 16h16%27 stroke=%27%23278cff%27 stroke-width=%274%27 stroke-linecap=%27square%27/%3E%3C/svg%3E" />
+<style>
+  @font-face { font-family: Departure; src: url("DepartureMono-Regular.woff2") format("woff2"); font-display: block; }
+  @font-face { font-family: Geist; src: url("Geist-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: block; }
+  :root {
+    --bg: #030407; --text: #f2f3f7; --muted: #9297a6; --faint: #606879;
+    --line: rgba(199, 210, 239, 0.13); --blue: #278cff; --cyan: #a1d6ff; --gold: #d9a441; --red: #ef6b6b;
+    --panel: #080b12; --soft: #b9bfcc;
+    --r-lg: 14px; --r-md: 10px; --r-sm: 4px;
+    --display: Departure, "Courier New", monospace;
+    --body: Geist, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; }
+  body { font-family: var(--body); -webkit-font-smoothing: antialiased; cursor: pointer; user-select: none; }
+
+  /* 16:9 stage, scaled to fit */
+  .stage { position: absolute; left: 50%; top: 50%; width: 1600px; height: 900px; transform-origin: center; isolation: isolate; overflow: hidden; }
+  .atmo { position: absolute; inset: 0; z-index: -2;
+    background: radial-gradient(ellipse at 50% 57%, #0b2a5444, transparent 50%), radial-gradient(ellipse at 82% 34%, #0d1f3d66, transparent 45%), radial-gradient(ellipse at 10% 90%, #144f9b18, transparent 55%); }
+  .grid { position: absolute; inset: 0; z-index: -1;
+    background-image: radial-gradient(rgba(199, 210, 239, 0.09) 1px, transparent 1px); background-size: 28px 28px;
+    mask-image: radial-gradient(ellipse at 50% 50%, #000 30%, transparent 80%); }
+
+  .grain { position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0.05; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .progress { position: absolute; left: 0; top: 0; height: 2px; width: 100%; background: var(--blue); box-shadow: 0 0 12px #278cff99; transform-origin: left; transform: scaleX(0); transition: transform 0.6s var(--ease); z-index: 6; }
+
+  /* slides */
+  .slide { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity 0.6s var(--ease), filter 0.6s var(--ease), transform 0.6s var(--ease), visibility 0s linear 0.6s; transform: scale(1.02); }
+  .slide.on { opacity: 1; visibility: visible; transform: none; filter: none; transition: opacity 0.6s var(--ease), filter 0.6s var(--ease), transform 0.6s var(--ease), visibility 0s; }
+  .slide.gone { filter: blur(10px); transform: scale(0.97); }
+
+  /* shared type */
+  .head { position: absolute; top: 58px; left: 76px; right: 76px; }
+  .eyebrow { display: inline-block; border: 1px solid #4168966b; padding: 6px 13px 6px 11px; border-radius: var(--r-sm); font-size: 13px; letter-spacing: 1.4px; color: #b0c1dc; background: #030a1480; font-family: var(--display); }
+  h1 { font-family: var(--display); font-weight: 400; font-size: 68px; letter-spacing: -3.4px; line-height: 1.1; margin: 22px 0 0; max-width: 1448px; text-wrap: balance; }
+  h1 em, .blue { font-style: normal; color: var(--blue); }
+  .caret { display: inline-block; width: 0.55em; height: 0.9em; margin-left: 6px; background: var(--blue); vertical-align: -0.08em; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .lede { font-size: 24px; line-height: 1.5; color: var(--soft); margin: 0; max-width: 62ch; text-wrap: pretty; font-weight: 400; }
+  .lede b { color: var(--text); font-weight: 600; }
+  .eyebrow::before { content: "+"; color: var(--blue); margin-right: 9px; }
+  .mono { font-family: var(--display); }
+  .tag { position: absolute; font-family: var(--display); font-size: 15px; letter-spacing: 0.6px; color: var(--cyan); background: #030a14cc; border: 1px solid #4168966b; border-radius: var(--r-sm); padding: 6px 12px; white-space: nowrap; }
+  .chip { display: inline-block; font-family: var(--display); font-size: 18px; color: var(--cyan); border: 1px solid #4168966b; border-radius: var(--r-sm); padding: 2px 10px; background: #081d3a66; }
+  .num { position: absolute; top: 64px; right: 76px; font: 13px var(--display); letter-spacing: 1.4px; color: var(--faint); }
+  .note { position: absolute; left: 76px; bottom: 64px; font-size: 14px; color: var(--faint); max-width: 1100px; }
+  .card { position: absolute; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line); box-shadow: 0 30px 80px -20px #01060f, 0 12px 30px -12px #0a1a3388, 0 0 0 1px #ffffff08, 0 0 60px -10px #278cff33; background: #0a0c12; }
+  .card img { display: block; width: 100%; height: auto; }
+  .panel { position: absolute; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md); padding: 26px 28px; box-shadow: 0 20px 50px -24px #01060f, inset 0 1px 0 #ffffff0a; }
+  .panel h3 { font: 400 26px var(--display); letter-spacing: -0.8px; margin: 0 0 12px; }
+  .panel p { text-wrap: pretty; margin: 0; font-size: 19px; line-height: 1.5; color: var(--soft); }
+  .panel .k { font: 12px var(--display); letter-spacing: 1.4px; color: var(--faint); margin-bottom: 14px; display: block; }
+
+  /* highlight sweep + arrow draw */
+  .hl { position: absolute; background: #278cff; mix-blend-mode: screen; opacity: 0.22; border-radius: 6px; outline: 2px solid #278cffcc; transform-origin: left center; transform: scaleX(0); transition: transform 0.9s var(--ease) 0.4s; }
+  .in .hl, .hl.in { transform: scaleX(1); }
+  .draw path { stroke-dasharray: 600; stroke-dashoffset: 600; }
+  .draw.in path { animation: draw 0.9s var(--ease) 0.25s forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  /* reveal mechanics (from the Ram Altman slide) */
+  [data-step] { opacity: 0; pointer-events: none; }
+  [data-step].in { opacity: 1; }
+  .fx-fade.in { animation: fade 0.7s var(--ease) both; }
+  .fx-drop.in { animation: drop 0.95s var(--spring) both; }
+  .fx-slide.in { animation: slide 0.9s var(--ease) both; }
+  .fx-pop.in { animation: pop 0.6s var(--spring) both; }
+  .fx-rise.in { animation: rise 0.8s var(--spring) both; }
+  .fx-word .w { display: inline-block; opacity: 0; transform: translateY(40px); }
+  .fx-word.in .w { animation: word 0.7s var(--spring) both; }
+  @keyframes fade { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes drop { from { opacity: 0; transform: translateY(-420px) rotate(-22deg) scale(0.9); } to { opacity: 1; transform: rotate(var(--r, 0deg)); } }
+  @keyframes slide { from { opacity: 0; transform: translateX(520px) rotate(10deg); } to { opacity: 1; transform: rotate(var(--r, 0deg)); } }
+  @keyframes pop { from { opacity: 0; transform: rotate(var(--r, 0deg)) scale(0.4); } to { opacity: 1; transform: rotate(var(--r, 0deg)) scale(1); } }
+  @keyframes rise { from { opacity: 0; transform: translateY(60px) scale(0.96); } to { opacity: 1; transform: none; } }
+  @keyframes word { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: none; } }
+  .card[style*="--r"], .tag[style*="--r"] { transform: rotate(var(--r)); }
+
+  /* punchline */
+  .punch { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
+  .punch h2 { font-family: var(--display); font-weight: 400; font-size: 104px; letter-spacing: -5px; line-height: 1.08; margin: 0; text-wrap: balance; }
+  .punch h2 .blue { color: var(--blue); text-shadow: 0 0 40px #278cff88; }
+  .punch .sub { margin: 38px auto 0; font-size: 24px; line-height: 1.6; color: var(--soft); max-width: 1060px; text-wrap: pretty; }
+  .dim-scene { transition: filter 0.8s var(--ease), opacity 0.8s var(--ease), transform 0.8s var(--ease); }
+  .punched .dim-scene { filter: blur(10px) saturate(0.5); opacity: 0.12; transform: scale(0.96); }
+  .veil { position: absolute; inset: 0; background: radial-gradient(ellipse 55% 45% at 50% 50%, #030407f2, #03040799 60%, transparent 100%); }
+
+  /* footer */
+  .dots { position: absolute; right: 36px; bottom: 28px; display: flex; gap: 7px; z-index: 5; }
+  .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); opacity: 0.4; transition: all 0.3s; }
+  .dots i.on { background: var(--cyan); opacity: 1; }
+  .dots i.here { width: 18px; border-radius: 3px; }
+  .brand { position: absolute; left: 36px; bottom: 26px; font-family: var(--display); font-size: 13px; letter-spacing: 1px; color: var(--faint); z-index: 5; }
+
+
+  /* Ram-style callouts: a display note and a hand-drawn arrow that draws itself */
+  .cn { text-wrap: balance; position: absolute; font-family: var(--display); line-height: 1.3; letter-spacing: -0.6px; color: var(--text); z-index: 3; }
+  .cn em { font-style: normal; color: var(--cyan); }
+  .ann { position: absolute; inset: 0; width: 1600px; height: 900px; overflow: visible; pointer-events: none; z-index: 3; }
+  .ann path { fill: none; stroke: #a1d6ff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1400; stroke-dashoffset: 1400; }
+  .ann.in path { animation: draw 0.8s var(--ease) calc(0.35s + var(--d, 0s)) forwards; }
+  .ann.in path.head { animation-duration: 0.3s; animation-delay: calc(1.05s + var(--d, 0s)); }
+
+  /* ── 1 title ── */
+  #s1 .title { position: absolute; left: 96px; top: 250px; }
+  #s1 .title h1 { font-size: 128px; letter-spacing: -7px; margin: 26px 0 0; }
+  #s1 .title .lede { margin-top: 26px; max-width: 640px; }
+  #s1 .board { position: absolute; right: -170px; top: 300px; width: 840px; transform: perspective(1600px) rotateX(34deg) rotateZ(-14deg); }
+  #s1 .board.in { animation: board-in 1.3s var(--ease) both; }
+  #s1 .board img { width: 100%; display: block; animation: float 6s ease-in-out infinite; filter: drop-shadow(0 40px 60px #000); }
+  #s1 .glow { position: absolute; left: 47.6%; top: 55.1%; width: 34%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle, #ffd68c80 0%, #d9a44140 28%, transparent 65%); mix-blend-mode: screen; animation: breathe 4s ease-in-out infinite; }
+  @keyframes board-in { from { opacity: 0; transform: perspective(1600px) rotateX(60deg) rotateZ(-30deg) translateY(200px); } to { opacity: 1; transform: perspective(1600px) rotateX(34deg) rotateZ(-14deg); } }
+  @keyframes float { 50% { transform: translateY(-14px); } }
+  @keyframes breathe { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+  #s1 .credit { position: absolute; right: 36px; bottom: 52px; font-size: 11px; color: #4a5160; }
+
+  /* ── oom: a laptop runs out of memory ── */
+  #s-oom .lapx { position: absolute; left: 76px; top: 268px; width: 900px; }
+  #s-oom .scr { height: 330px; border: 3px solid #2a3140; border-bottom-width: 14px; border-radius: 18px 18px 4px 4px; background: #05070c; padding: 30px 34px; font: 20px/1.75 var(--display); color: var(--soft); box-shadow: 0 30px 80px -20px #01060f, 0 0 60px -10px #278cff33; transition: border-color 0.4s, box-shadow 0.4s; }
+  #s-oom .base { height: 20px; margin: 0 -46px; background: linear-gradient(#2a3140, #151a24); border-radius: 0 0 16px 16px; }
+  #s-oom .scr .p { color: var(--blue); }
+  #s-oom .scr .dim { color: var(--faint); }
+  #s-oom .scr .ln.in { animation: fade 0.5s var(--ease) both; }
+  #s-oom .load { display: flex; align-items: center; gap: 16px; }
+  #s-oom .load .t { position: relative; width: 300px; height: 18px; border: 1.5px solid #4a5263; border-radius: 4px; overflow: hidden; }
+  #s-oom .load .f { position: absolute; inset: 0 auto 0 0; width: 25%; background: var(--cyan); transform-origin: left; }
+  #s-oom .load.in .f { animation: grow 1.6s var(--ease) 0.2s both, redden 0.4s linear 1.8s forwards; }
+  @keyframes redden { to { background: var(--red); } }
+  #s-oom .err { color: var(--red); }
+  #s-oom .lapx:has(.err.in) .scr { border-color: #6b2a2a; box-shadow: 0 30px 80px -20px #01060f, 0 0 70px -10px #ef6b6b66; animation: shake 0.45s ease-in-out; }
+  @keyframes shake { 20% { transform: translateX(-10px); } 40% { transform: translateX(9px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(4px); } }
+  #s-oom .mem { position: absolute; left: 1090px; top: 268px; width: 440px; height: 482px; }
+  #s-oom .mem .k { position: absolute; left: 0; top: -2px; font: 13px var(--display); letter-spacing: 1.4px; color: var(--faint); }
+  #s-oom .ghost { position: absolute; left: 0; top: 34px; width: 150px; height: 227px; border: 2px dashed var(--red); border-bottom: none; border-radius: 12px 12px 0 0; background: repeating-linear-gradient(-45deg, #ef6b6b22 0 10px, transparent 10px 20px); }
+  #s-oom .tube { position: absolute; left: 0; bottom: 0; width: 150px; height: 220px; border: 2px solid #4a5263; border-radius: 0 0 12px 12px; overflow: hidden; background: #ffffff06; }
+  #s-oom .lvl { position: absolute; inset: 0; background: var(--cyan); transform-origin: bottom; }
+  #s-oom .tube.in .lvl { animation: fillup 1.4s var(--ease) 0.2s both, redden 0.4s linear 1.4s forwards; }
+  @keyframes fillup { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  #s-oom .ml { position: absolute; left: 178px; font: 22px/1.3 var(--display); letter-spacing: -0.5px; }
+  #s-oom .ml small { display: block; font: 15px var(--body); color: var(--faint); letter-spacing: 0; }
+
+  /* ── 2 idle ── */
+  #s2 .fleet { position: absolute; left: 76px; top: 330px; display: grid; grid-template-columns: repeat(4, 150px); gap: 22px 40px; }
+  #s2 .lap { display: grid; justify-items: center; gap: 8px; color: #3a4150; }
+  #s2 .lap svg { width: 120px; height: 84px; }
+  #s2 .lap span { font: 13px var(--display); letter-spacing: 1px; }
+  #s2 .fleet.in .lap { animation: pop 0.5s var(--spring) both; }
+  #s2 .zz { position: absolute; font: 22px var(--display); color: var(--faint); }
+  #s2 .callout { position: absolute; right: 110px; top: 400px; width: 560px; text-align: right; }
+  #s2 .callout p { font: 40px/1.3 var(--display); letter-spacing: -0.6px; margin: 0; }
+  #s2 .callout p em { font-style: normal; color: var(--cyan); }
+  #s2 .ours { position: absolute; left: 76px; bottom: 120px; display: flex; gap: 14px; }
+
+  /* ── 3 cloud ── */
+  #s3 .cols { position: absolute; left: 76px; right: 76px; top: 330px; display: grid; grid-template-columns: 1.35fr 1fr; grid-template-rows: 1fr 1fr; gap: 22px 28px; }
+  #s3 .cols .panel { position: relative; }
+  #s3 .panel .big { font: 54px var(--display); letter-spacing: -2px; color: var(--cyan); display: block; margin-bottom: 14px; }
+  #s3 .panel.hero { grid-row: 1 / 3; display: flex; flex-direction: column; justify-content: flex-end; padding: 34px 36px; }
+  #s3 .panel.hero .big { font-size: 120px; letter-spacing: -6px; line-height: 1; color: var(--blue); text-shadow: 0 0 40px #278cff55; margin-bottom: 22px; }
+  #s3 .panel.hero h3 { font-size: 34px; }
+  #s3 .panel.hero p { font-size: 21px; max-width: 32ch; }
+  #s3 .panel.side { display: grid; grid-template-columns: 130px 1fr; align-items: center; column-gap: 8px; padding: 22px 26px; }
+  #s3 .panel.side .big { grid-row: 1 / 3; margin: 0; font-size: 46px; }
+  #s3 .panel.side h3 { margin-bottom: 6px; }
+  #s3 .panel.side p { font-size: 17px; }
+  #s3 .after { position: absolute; left: 76px; bottom: 110px; }
+
+  /* ── 4 memory bars ── */
+  #s4 .bars { position: absolute; left: 76px; top: 330px; width: 1450px; display: grid; gap: 30px; }
+  #s4 .row { display: grid; grid-template-columns: 360px 1fr; align-items: center; gap: 24px; }
+  #s4 .row .lbl { font: 19px var(--display); letter-spacing: -0.4px; }
+  #s4 .row .lbl small { display: block; font: 14px var(--body); color: var(--faint); letter-spacing: 0; margin-top: 4px; }
+  #s4 .track { position: relative; height: 34px; }
+  #s4 .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; transform-origin: left; display: flex; align-items: center; justify-content: flex-end; padding-right: 12px; font: 15px var(--display); color: #030407; }
+  #s4 .cap { position: absolute; left: 0; top: 0; bottom: 0; border: 1.5px dashed #4a5263; border-radius: 6px; }
+  #s4 .in .fill { animation: grow 1.1s var(--ease) both; }
+  @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  #s4 .laptop .fill { background: var(--cyan); }
+  #s4 .model .fill { background: var(--text); }
+  #s4 .nofit { position: absolute; font: 16px var(--display); color: var(--red); border: 1px solid #ef6b6b88; background: #2a0b0bcc; border-radius: 20px; padding: 6px 12px; }
+  #s4 .line8 { position: absolute; top: 300px; bottom: 150px; width: 0; border-left: 2px solid var(--red); }
+
+  /* ── 5 callback ── */
+  #s0 .head h1 { font-size: 76px; letter-spacing: -3.8px; }
+  #s0 .meme { left: 76px; top: 300px; width: 500px; }
+  #s0 .tweet { right: 84px; top: 116px; width: 530px; }
+  #s0 .meme-tag { left: 100px; top: 790px; }
+  #s0 .tweet .hl { left: 1.2%; width: 96%; top: 33.6%; height: 15.4%; mix-blend-mode: multiply; opacity: 0.38; outline: none; opacity: 0.38; }
+  #s0 .punch .sub b { color: var(--text); font-weight: 600; }
+  #s0 .in .hl:not(.in) { transform: scaleX(0); }
+
+  /* ── 6 pool ── */
+  #s6 .copy { position: absolute; left: 76px; top: 250px; width: 640px; display: grid; gap: 22px; }
+  #s6 svg.ring { position: absolute; right: 70px; top: 200px; width: 760px; height: 667px; overflow: visible; }
+  #s6 .ring text { font-family: var(--display); }
+  #s6 .ring .edge { stroke-dasharray: 400; stroke-dashoffset: 400; }
+  #s6 .ring .in .edge, #s6 .ring g.in .edge { animation: draw 1s var(--ease) forwards; }
+  #s6 .sum { position: absolute; left: 76px; bottom: 120px; }
+
+  /* ── 7 money ── */
+  #s7 .flow { position: absolute; left: 76px; right: 76px; top: 320px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 46px; }
+  #s7 .flow .panel { position: relative; padding: 22px 24px; }
+  #s7 .flow .panel b { display: block; font: 34px var(--display); letter-spacing: -1px; color: var(--cyan); margin-top: 8px; }
+  #s7 .flow .panel:not(:last-child)::after { content: "→"; position: absolute; right: -36px; top: 50%; translate: 0 -50%; font: 26px var(--display); color: var(--faint); }
+  #s7 .split { position: absolute; left: 76px; right: 76px; top: 560px; }
+  #s7 .split .barline { display: flex; height: 64px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+  #s7 .split .seg { display: flex; flex-direction: column; justify-content: center; padding: 0 14px; font: 15px var(--display); color: #030407; white-space: nowrap; overflow: hidden; }
+  #s7 .split.in .seg { animation: grow 0.9s var(--ease) both; transform-origin: left; }
+  #s7 .split .seg small { font: 12px var(--body); opacity: 0.75; }
+  #s7 .split .legend { margin-top: 14px; font-size: 16px; color: var(--faint); }
+  #s7 .extra { position: absolute; left: 76px; bottom: 96px; display: flex; gap: 14px; flex-wrap: wrap; width: 1450px; }
+
+  /* ── 8 / 9 screens ── */
+  .shots { position: absolute; left: 76px; right: 76px; top: 300px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px; }
+  .shots .card { position: relative; }
+  .shots figure { margin: 0; display: grid; gap: 18px; justify-items: start; }
+  .shots .tag { position: static; white-space: normal; }
+  .shot-cap { position: absolute; bottom: 104px; left: 76px; font-size: 20px; color: var(--muted); }
+
+
+  /* ── architecture ── */
+  #s-arch .arch-svg { position: absolute; inset: 0; width: 1600px; height: 900px; overflow: visible; }
+  #s-arch .ab rect { fill: #080b12; stroke: #278cff; stroke-opacity: 0.55; stroke-width: 1.6; }
+  #s-arch .ab text { font: 17px var(--display); fill: #c9ccd3; }
+  #s-arch .ab.hot rect { stroke: #278cff; stroke-opacity: 1; stroke-width: 2.2; filter: drop-shadow(0 0 14px #278cff66); }
+  #s-arch .ab.hot text { fill: #f2f3f7; }
+  #s-arch .ae, #s-arch path[marker-end] { stroke: #9297a6; stroke-width: 1.4; }
+  #s-arch .draw path[marker-end] { stroke-dasharray: 700; stroke-dashoffset: 700; }
+  #s-arch .draw.in path[marker-end] { animation: draw 0.9s var(--ease) 0.1s forwards; }
+  #s-arch path[marker-end*="ahm"] { stroke: #f2f3f7; stroke-width: 1.8; }
+  #s-arch .albg { fill: #030407; }
+  #s-arch .al { font: 13px var(--display); fill: #9297a6; }
+  #s-arch .al.main { font-size: 15px; fill: #f2f3f7; }
+  #s-arch .arch-key { position: absolute; right: 76px; top: 230px; display: grid; gap: 10px; justify-items: end; }
+  #s-arch .arch-key span { font: 14px var(--display); color: var(--cyan); border: 1px solid #4168966b; border-radius: var(--r-sm); padding: 5px 12px; background: #030a14cc; }
+  #s-arch .arch-credit { position: absolute; left: 76px; bottom: 60px; font-size: 13px; color: var(--faint); }
+
+  /* ── 10 onboarding ── */
+  #s10 .steps { position: absolute; left: 76px; top: 300px; width: 860px; display: grid; gap: 14px; }
+  #s10 .st { display: grid; grid-template-columns: 54px 1fr; gap: 18px; align-items: start; }
+  #s10 .st i { font: normal 15px var(--display); color: var(--cyan); border: 1px solid #4168966b; border-radius: var(--r-sm); height: 40px; display: grid; place-items: center; background: #081d3a66; }
+  #s10 .st b { display: block; font: 400 23px var(--display); letter-spacing: -0.6px; }
+  #s10 .st span { font-size: 16px; color: var(--muted); }
+  #s10 .arch { position: absolute; right: 76px; top: 300px; width: 560px; height: 470px; }
+  #s10 .arch .panel { padding: 16px 20px; }
+  #s10 .arch .panel h3 { font-size: 20px; margin: 0 0 4px; }
+  #s10 .arch .panel p { font-size: 15px; }
+  #s10 .arch svg { position: absolute; inset: 0; overflow: visible; }
+  #s10 .secure { position: absolute; right: 76px; bottom: 90px; display: flex; gap: 10px; flex-wrap: wrap; width: 560px; justify-content: flex-end; }
+
+  /* ── 11 routing ── */
+  #s11 .formula { position: absolute; left: 76px; top: 290px; font: 64px var(--display); letter-spacing: -2.5px; }
+  #s11 .formula .v { color: var(--cyan); }
+  #s11 .defs { position: absolute; left: 76px; top: 410px; width: 780px; display: grid; gap: 18px; }
+  #s11 .defs .panel { position: relative; padding: 18px 22px; }
+  #s11 .defs .panel h3 { font-size: 22px; margin-bottom: 6px; }
+  #s11 .defs .panel p { font-size: 17px; }
+  #s11 .race { position: absolute; right: 76px; top: 410px; width: 600px; }
+  #s11 .race .panel { position: relative; }
+  #s11 .lane { display: grid; grid-template-columns: 110px 1fr 70px; gap: 14px; align-items: center; margin-top: 18px; font: 16px var(--display); }
+  #s11 .lane .t { height: 26px; background: #ffffff0a; border-radius: 5px; position: relative; overflow: hidden; }
+  #s11 .lane .f { position: absolute; inset: 0 auto 0 0; border-radius: 5px; transform-origin: left; }
+  #s11 .race.in .f { animation: grow 1.2s var(--ease) 0.2s both; }
+  #s11 .lane small { font: 13px var(--body); color: var(--faint); display: block; }
+  #s11 .win { color: var(--blue); }
+  #s11 .more { position: absolute; left: 76px; bottom: 96px; display: flex; gap: 12px; flex-wrap: wrap; width: 1450px; }
+
+  /* ── 12 hardware ── */
+  #s12 .stats { position: absolute; left: 76px; right: 76px; top: 320px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  #s12 .stats .panel { position: relative; }
+  #s12 .stats .big { font: 60px var(--display); letter-spacing: -2.5px; color: var(--cyan); display: block; margin-bottom: 8px; }
+  #s12 .stats .big s { color: var(--faint); text-decoration-thickness: 2px; }
+  #s12 .list { position: absolute; left: 76px; right: 76px; top: 590px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 40px; }
+  #s12 .list div { font-size: 19px; color: var(--soft); display: flex; gap: 14px; }
+  #s12 .list div::before { content: "+"; font-family: var(--display); color: var(--blue); }
+
+  /* ── 13 trust ── */
+  #s13 .cols { position: absolute; left: 76px; right: 76px; top: 310px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  #s13 .cols { align-items: start; }
+  #s13 .cols .panel { position: relative; min-height: 380px; }
+  #s13 .cols .panel:nth-child(2) { margin-top: 40px; }
+  #s13 .cols .panel:nth-child(3) { margin-top: 80px; }
+  #s13 .logo { display: block; width: 56px; height: 56px; object-fit: contain; filter: invert(92%); margin-bottom: 22px; }
+  #s13 .panel h3 { font-size: 30px; }
+  #s13 .panel .uses { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; }
+  #s13 .panel .uses .chip { font-size: 14px; }
+
+  /* ── 14 impact ── */
+  #s14 .measured { position: absolute; left: 76px; top: 310px; width: 820px; display: grid; gap: 22px; }
+  #s14 .measured .panel { position: relative; display: grid; grid-template-columns: 220px 1fr; gap: 26px; align-items: center; }
+  #s14 .measured .big { font: 80px var(--display); letter-spacing: -4px; color: var(--cyan); }
+  #s14 .est { position: absolute; right: 76px; top: 310px; width: 580px; border-style: dashed; }
+  #s14 .est .big { font: 64px var(--display); letter-spacing: -3px; color: var(--gold); display: block; margin: 6px 0 10px; }
+  #s14 .est .eq { font: 20px var(--display); color: var(--text); margin: 18px 0 8px; }
+  #s14 .est .k { color: var(--gold); }
+
+  /* ── 15 close ── */
+  #s15 .sub .chip { margin: 0 4px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.2s !important; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="laptop" viewBox="0 0 120 84"><rect x="16" y="6" width="88" height="58" rx="6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M4 72h112l-6 8H10z" fill="currentColor"/></symbol>
+</svg>
+
+<div class="stage" id="stage">
+  <div class="atmo"></div>
+  <div class="grid"></div>
+  <div class="grain"></div>
+  <div class="progress" id="progress"></div>
+
+  <!-- 0 · opener: Ram Altman (from pitch/ram-altman) -->
+  <section class="slide" id="s0">
+    <div class="dim-scene">
+      <div class="head">
+        <span class="eyebrow">THE PROBLEM, ACCORDING TO OPENAI</span>
+        <h1 data-step="0" class="fx-fade" data-type="Meet Ram Altman."><span class="typed"></span><span class="caret"></span></h1>
+      </div>
+      <div class="card meme fx-drop" data-step="1" style="--r:-4deg"><img src="ram-altman.png" alt="Sam Altman's X profile renamed to Ram Altman" /></div>
+      <span class="tag meme-tag fx-pop" data-step="1" style="--r:-4deg;animation-delay:.55s">display name: verified ✓</span>
+      <div class="card tweet fx-slide" data-step="2" style="--r:2.2deg"><img src="pubity-tweet.png" alt="Pubity post: Sam Altman believes people owning RAM is wasteful" /><div class="hl" data-step="3"></div></div>
+      <div class="cn fx-fade" data-step="3" style="left:606px;top:372px;width:360px;text-align:right;font-size:26px">your 16&nbsp;GB&nbsp;laptop:<br><em>apparently a crime</em></div>
+      <svg class="ann draw" data-step="3" viewBox="0 0 1600 900"><path d="M677 452 C770 510 874 498 955 474"/><path class="head" d="M939 462 L956 474 L939 487"/></svg>
+    </div>
+    <div class="punch">
+      <div class="veil fx-fade" data-step="4"></div>
+      <h2 class="fx-word" data-step="4" style="position:relative">
+        <span class="w">Sam</span> <span class="w">wants</span> <span class="w">your</span> <span class="w">RAM.</span><br>
+        <span class="w blue">We're</span> <span class="w blue">asking</span> <span class="w blue">whose</span> <span class="w blue">laptop</span> <span class="w blue">isn't</span> <span class="w blue">using</span> <span class="w blue">theirs.</span>
+      </h2>
+    </div>
+  </section>
+
+  <!-- 1 · title -->
+  <section class="slide" id="s1">
+    <div class="board" data-step="0"><img src="gpu-board.webp" alt="" /><span class="glow"></span></div>
+    <div class="title">
+      <span class="eyebrow fx-fade" data-step="0">NEAR HACKATHON 2026 · PITCH</span>
+      <h1 data-step="0" class="fx-fade" data-type="RAMX."><span class="typed"></span><span class="caret"></span></h1>
+      <p class="lede fx-fade" data-step="1"><b>Spare GPUs. One bigger model.</b><br>Pool the laptops people already own, and run AI models that none of them can run alone.</p>
+    </div>
+    <span class="credit">GPU photo: Trio3D / Wikimedia Commons, CC BY-SA 3.0 (edited)</span>
+    <div class="cn fx-fade" data-step="2" style="left:96px;top:640px;width:520px;text-align:left;font-size:28px;">your idle GPU,<br><em>tonight</em></div><svg class="ann draw" data-step="2" viewBox="0 0 1600 900" style="--d:0s"><path d="M420 690 Q801.6 479.2 1230 560"/><path class="head" d="M1218.3 550.6 L1230 560 L1215.7 564.5"/></svg>
+  </section>
+
+  <!-- problem: a big model doesn't fit on your laptop -->
+  <section class="slide" id="s-oom">
+    <div class="head">
+      <span class="eyebrow">PROBLEM 01 · OUT OF MEMORY</span>
+      <h1 data-step="0" class="fx-fade" data-type="You want to run a big AI model."><span class="typed"></span><span class="caret"></span></h1>
+    </div>
+    <span class="num">03</span>
+    <div class="lapx fx-rise" data-step="1">
+      <div class="scr">
+        <div><span class="p">$</span> run qwen3-30b-a3b --8bit</div>
+        <div class="dim">› 48 layers · ≈ 32.5 GB of weights</div>
+        <div class="dim">› this laptop: 16 GB memory · ≈ 8 GB usable</div>
+        <div class="ln load" data-step="2"><span>› loading weights</span><span class="t"><span class="f"></span></span><span>8.1 / 32.5 GB</span></div>
+        <div class="ln err" data-step="3">✕ error: out of memory</div>
+        <div class="ln dim" data-step="3">  swapping to disk… process killed</div>
+      </div>
+      <div class="base"></div>
+    </div>
+    <div class="mem fx-fade" data-step="2">
+      <span class="k">MEMORY</span>
+      <div class="ghost fx-fade" data-step="3"></div>
+      <div class="tube" data-step="2"><span class="lvl"></span></div>
+      <div class="ml fx-fade" data-step="3" style="top:30px;color:var(--red)">32.5 GB<small>what the model needs</small></div>
+      <div class="ml" style="top:254px">16 GB<small>what your laptop has</small></div>
+    </div>
+    <div class="cn fx-fade" data-step="4" style="left:640px;top:690px;width:600px;text-align:left;font-size:28px;">your laptop:<br><em>out of memory</em></div><svg class="ann draw" data-step="4" viewBox="0 0 1600 900" style="--d:0s"><path d="M690 686 Q700 470 410 462"/><path class="head" d="M422 471 L410 462 L422 453"/></svg>
+  </section>
+
+  <!-- 2 · problem: idle compute -->
+  <section class="slide" id="s2">
+    <div class="head">
+      <span class="eyebrow">PROBLEM 02 · IDLE COMPUTE</span>
+      <h1 data-step="0" class="fx-fade" data-type="Most consumer GPUs sit idle."><span class="typed"></span><span class="caret"></span></h1>
+    </div>
+    <span class="num">04</span>
+    <div class="fleet" data-step="1" style="transform:rotate(-2deg)">
+      <div class="lap"><svg><use href="#laptop"/></svg><span>IDLE</span></div>
+      <div class="lap"><svg><use href="#laptop"/></svg><span>IDLE</span></div>
+      <div class="lap"><svg><use href="#laptop"/></svg><span>IDLE</span></div>
+      <div class="lap"><svg><use href="#laptop"/></svg><span>IDLE</span></div>
+      <div class="lap"><svg><use href="#laptop"/></svg><span>IDLE</span></div>
+      <div class="lap"><svg><use href="#laptop"/></svg><span>IDLE</span></div>
+      <div class="lap"><svg><use href="#laptop"/></svg><span>IDLE</span></div>
+      <div class="lap"><svg><use href="#laptop"/></svg><span>IDLE</span></div>
+      <div class="lap"><svg><use href="#laptop"/></svg><span>IDLE</span></div>
+      <div class="lap"><svg><use href="#laptop"/></svg><span>IDLE</span></div>
+      <div class="lap"><svg><use href="#laptop"/></svg><span>IDLE</span></div>
+      <div class="lap"><svg><use href="#laptop"/></svg><span>IDLE</span></div>
+    </div>
+    <div class="callout fx-fade" data-step="2">
+      <p>Their owners already paid for them.<br><em>They earn nothing.</em></p>
+    </div>
+    <div class="ours fx-fade" data-step="3">
+      <span class="chip">MacBook Air · 16 GB</span><span class="chip">MacBook · 16 GB</span><span class="chip">Gaming laptop · RTX 4060 · 8 GB</span>
+      <span class="lede" style="font-size:19px;align-self:center">our own team's laptops, idle every night</span>
+    </div>
+    <svg class="ann draw" data-step="2" viewBox="0 0 1600 900" style="--d:0.2s"><path d="M1230 575 Q1011.2 650.0 820 520"/><path class="head" d="M827.0 533.3 L820 520 L834.9 521.6"/></svg>
+  </section>
+
+  <!-- 3 · problem: commercial compute -->
+  <section class="slide" id="s3">
+    <div class="head">
+      <span class="eyebrow">PROBLEM 03 · COMMERCIAL COMPUTE</span>
+      <h1 data-step="0" class="fx-fade" data-type="Big models live in someone else's data centre."><span class="typed"></span><span class="caret"></span></h1>
+    </div>
+    <span class="num">05</span>
+    <div class="cols">
+      <div class="panel hero fx-drop" data-step="1" style="--r:-1deg"><span class="big">$$$</span><h3>Expensive</h3><p>You rent GPUs by the hour or pay per token. The bill grows with every question.</p></div>
+      <div class="panel side fx-drop" data-step="2" style="--r:1deg"><span class="big">1→N</span><h3>Centralised</h3><p>A few providers own the hardware and decide the price, the models and who gets access.</p></div>
+      <div class="panel side fx-drop" data-step="3" style="--r:-0.8deg"><span class="big">⇢ ?</span><h3>Not private</h3><p>Your prompts leave your machine and go to a third party you have to trust.</p></div>
+    </div>
+    <p class="lede after fx-fade" data-step="4">Meanwhile, the hardware people already own <b>stays switched off</b>.</p>
+    <div class="cn fx-fade" data-step="5" style="left:880px;top:690px;width:600px;text-align:left;font-size:24px;"><em>every</em> prompt leaves your machine</div><svg class="ann draw" data-step="5" viewBox="0 0 1600 900" style="--d:0s"><path d="M1370 686 Q1365.3 639.5 1320 628"/><path class="head" d="M1331.1 638.1 L1320 628 L1334.6 624.4"/></svg>
+  </section>
+
+  <!-- 4 · problem: a laptop can't run big models -->
+  <section class="slide" id="s4">
+    <div class="dim-scene">
+    <div class="head">
+      <span class="eyebrow">PROBLEM 04 · ONE LAPTOP IS TOO SMALL</span>
+      <h1 data-step="0" class="fx-fade" data-type="One laptop can't hold a big model."><span class="typed"></span><span class="caret"></span></h1>
+    </div>
+    <span class="num">06</span>
+    <!-- scale: 1 GB = 32 px -->
+    <div class="bars">
+      <div class="row laptop" data-step="1">
+        <div class="lbl">16 GB MacBook<small>≈ 8 GB usable for weights before macOS swaps</small></div>
+        <div class="track"><span class="cap" style="width:512px"></span><span class="fill" style="width:256px">8 GB</span></div>
+      </div>
+      <div class="row laptop" data-step="1">
+        <div class="lbl">8 GB RTX 4060 laptop<small>≈ 5 GB usable for weights</small></div>
+        <div class="track"><span class="cap" style="width:256px"></span><span class="fill" style="width:160px">5 GB</span></div>
+      </div>
+      <div class="row model" data-step="2">
+        <div class="lbl">Qwen3-14B · FP8<small>40 layers</small></div>
+        <div class="track"><span class="fill" style="width:480px">≈ 15 GB</span></div>
+      </div>
+      <div class="row model" data-step="2">
+        <div class="lbl">Qwen3-30B-A3B · 8-bit<small>48 layers, mixture of experts</small></div>
+        <div class="track"><span class="fill" style="width:1040px">≈ 32.5 GB</span></div>
+      </div>
+    </div>
+    <span class="line8 fx-fade" data-step="3" style="left:716px"></span>
+    <span class="nofit fx-pop" data-step="3" style="left:736px;top:610px">past one laptop's ≈ 8 GB: doesn't fit</span>
+    <p class="note fx-fade" data-step="3">Usable memory measured on our own pool: a 16 GB Mac swaps beyond ≈ 8–8.5 GB of weights, the RTX 4060 holds ≈ 7–8 layers. Alone, a laptop tops out around 8B models.</p>
+    <div class="cn fx-fade" data-step="4" style="left:1180px;top:650px;width:360px;text-align:right;font-size:28px;">your 16 GB laptop:<br><em>out of room</em></div><svg class="ann draw" data-step="4" viewBox="0 0 1600 900" style="--d:0s"><path d="M1290 648 Q1237.0 591.5 1160 600"/><path class="head" d="M1173.9 605.5 L1160 600 L1172.4 591.5"/></svg>
+  </div>
+    <div class="punch"><div class="veil fx-fade" data-step="5"></div><h2 class="fx-word" data-step="5" style="position:relative"><span class="w">One</span> <span class="w">laptop:</span> <span class="w">too</span> <span class="w">small.</span><br><span class="w blue">A</span> <span class="w blue">pool:</span> <span class="w blue">just</span> <span class="w blue">right.</span></h2></div>
+  </section>
+
+  <!-- 6 · solution -->
+  <section class="slide" id="s6">
+    <div class="head">
+      <span class="eyebrow">THE SOLUTION</span>
+      <h1 data-step="0" class="fx-fade" data-type="Pool the laptops. Split the model."><span class="typed"></span><span class="caret"></span></h1>
+    </div>
+    <span class="num">07</span>
+    <div class="copy">
+      <p class="lede fx-fade" data-step="1">Nearby laptops form a <b>pool</b>. Each one loads a slice of the model's layers.</p>
+      <p class="lede fx-fade" data-step="2">A request flows through the slices in order, and the answer streams back. <b>Mac and NVIDIA in the same pool.</b></p>
+      <p class="lede fx-fade" data-step="3">A coordinator routes each request to the best pool and <b>splits the payment by compute</b>.</p>
+    </div>
+    <svg class="ring" viewBox="0 0 820 720">
+      <g data-step="1" class="fx-fade">
+        <circle cx="410" cy="380" r="250" fill="none" stroke="rgba(242,243,247,0.3)" stroke-width="1.5" stroke-dasharray="2 8"/>
+      </g>
+      <g data-step="2">
+        <path class="edge" d="M240 470 Q 250 250 410 168" fill="none" stroke="#f2f3f7" stroke-width="2"/>
+        <path class="edge" d="M410 168 Q 570 250 580 470" fill="none" stroke="#f2f3f7" stroke-width="2"/>
+        <path class="edge" d="M580 470 Q 410 560 240 470" fill="none" stroke="#f2f3f7" stroke-opacity="0.4" stroke-width="2" stroke-dasharray="6 8"/>
+        <path id="route" d="M240 470 Q 250 250 410 168 Q 570 250 580 470" fill="none" stroke="none"/>
+        <circle r="8" fill="#278cff"><animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#route"/></animateMotion></circle>
+      </g>
+      <!-- laptops -->
+      <g data-step="1" class="fx-pop">
+        <g transform="translate(350 100)"><use href="#laptop" width="120" height="84" color="#f2f3f7"/></g>
+        <text x="410" y="50" text-anchor="middle" fill="#f2f3f7" font-size="22">Mika · M4 16 GB</text>
+        <g transform="translate(140 445)"><use href="#laptop" width="120" height="84" color="#f2f3f7"/></g>
+        <text x="200" y="560" text-anchor="middle" fill="#f2f3f7" font-size="22">Rex · RTX 4060 8 GB</text>
+        <g transform="translate(560 445)"><use href="#laptop" width="120" height="84" color="#f2f3f7"/></g>
+        <text x="620" y="560" text-anchor="middle" fill="#f2f3f7" font-size="22">Nova · M5 16 GB</text>
+      </g>
+      <g data-step="2" class="fx-fade">
+        <text x="410" y="80" text-anchor="middle" fill="#a1d6ff" font-size="18">layers 11–31</text>
+        <text x="200" y="590" text-anchor="middle" fill="#a1d6ff" font-size="18">layers 0–11</text>
+        <text x="620" y="590" text-anchor="middle" fill="#a1d6ff" font-size="18">layers 31–40</text>
+      </g>
+      <g data-step="3" class="fx-pop">
+        <rect x="320" y="352" width="180" height="56" rx="28" fill="#0a0d16" stroke="#278cff" stroke-width="1.6"/>
+        <text x="410" y="386" text-anchor="middle" fill="#f2f3f7" font-size="19">COORDINATOR</text>
+      </g>
+    </svg>
+    <div class="sum fx-fade" data-step="4"><span class="chip">16 GB</span> + <span class="chip">8 GB</span> + <span class="chip">16 GB</span> <span class="lede" style="font-size:22px">= <b>40 GB pooled</b> → Qwen3-14B runs, end to end</span></div>
+    <div class="cn fx-fade" data-step="5" style="left:290px;top:540px;width:440px;text-align:right;font-size:28px;">picks the pool,<br><em>splits the pay</em></div><svg class="ann draw" data-step="5" viewBox="0 0 1600 900" style="--d:0s"><path d="M745 572 Q899.3 509.7 1058 560"/><path class="head" d="M1047.5 549.3 L1058 560 L1043.2 562.7"/></svg>
+  </section>
+
+  <!-- 7 · payments -->
+  <section class="slide" id="s7">
+    <div class="head">
+      <span class="eyebrow">HOW A REQUEST PAYS</span>
+      <h1 data-step="0" class="fx-fade" data-type="Every token paid for, on the record."><span class="typed"></span><span class="caret"></span></h1>
+    </div>
+    <span class="num">08</span>
+    <div class="flow">
+      <div class="panel fx-rise" data-step="1"><span class="k">1 · HOLD</span>Maximum cost reserved<b>3,728.2 cr</b></div>
+      <div class="panel fx-rise" data-step="1" style="animation-delay:.15s"><span class="k">2 · SERVE</span>The pool streams the answer<b>256 tokens</b></div>
+      <div class="panel fx-rise" data-step="1" style="animation-delay:.3s"><span class="k">3 · SETTLE</span>Only real usage is charged<b>592.2 cr</b></div>
+      <div class="panel fx-rise" data-step="1" style="animation-delay:.45s"><span class="k">4 · RECEIPT</span>Signed, on the NEAR<b>ledger</b></div>
+    </div>
+    <div class="split" data-step="2">
+      <div class="barline">
+        <span class="seg" style="flex:24.75;background:#a1d6ff">Rex · 11 layers<small>146.6 cr</small></span>
+        <span class="seg" style="flex:45;background:#f2f3f7;animation-delay:.15s">Mika · 20 layers<small>266.5 cr</small></span>
+        <span class="seg" style="flex:20.25;background:#7fb3e8;animation-delay:.3s">Nova · 9 layers<small>119.9 cr</small></span>
+        <span class="seg" style="flex:5;background:#606879;animation-delay:.45s">5%<small>burn</small></span>
+        <span class="seg" style="flex:5;background:#278cff;animation-delay:.6s">5%<small>reserve</small></span>
+      </div>
+      <div class="legend">90% to the laptops, split by the layers each one served · example: Qwen3-14B, 412 tokens in, 256 out, model factor 1.75</div>
+    </div>
+    <div class="extra fx-fade" data-step="3">
+      <span class="chip">No account? AI agents pay per request with x402 in USDC on NEAR</span>
+      <span class="chip">Providers claim USDC each epoch with a Merkle proof</span>
+      <span class="chip">Guarded agents pay through an escrow contract</span>
+      <span class="chip">No credits for serving yourself</span>
+    </div>
+    <div class="cn fx-fade" data-step="4" style="left:1200px;top:236px;width:330px;text-align:left;font-size:24px;">you pay <em>only this</em></div><svg class="ann draw" data-step="4" viewBox="0 0 1600 900" style="--d:0s"><path d="M1250 280 Q1168.6 257.0 1110 318"/><path class="head" d="M1124.3 313.3 L1110 318 L1114.1 303.6"/></svg><div class="cn fx-fade" data-step="4" style="left:1120px;top:478px;width:420px;text-align:left;font-size:24px;animation-delay:0.4s;">90% <em>back to the laptops</em></div><svg class="ann draw" data-step="4" viewBox="0 0 1600 900" style="--d:0.4s"><path d="M1110 495 Q865.9 455.0 640 556"/><path class="head" d="M655.0 557.0 L640 556 L649.2 544.2"/></svg>
+  </section>
+
+  <!-- 8 · product: landing -->
+  <section class="slide" id="s8">
+    <div class="head">
+      <span class="eyebrow">THE PRODUCT · LIVE</span>
+      <h1 data-step="0" class="fx-fade" data-type="A real product, not a mockup."><span class="typed"></span><span class="caret"></span></h1>
+    </div>
+    <span class="num">09</span>
+    <div class="shots">
+      <figure data-step="1" class="fx-drop" style="--r:-1.5deg"><div class="card"><img src="shots/landing-hero.png" alt="Landing page hero" /></div><span class="tag">landing · the GPU you already own</span></figure>
+      <figure data-step="2" class="fx-drop" style="--r:1deg"><div class="card"><img src="shots/how-it-works.png" alt="How it works scroll story" /></div><span class="tag">how it works · scroll story, query to payout</span></figure>
+      <figure data-step="3" class="fx-drop" style="--r:-0.8deg"><div class="card"><img src="shots/landing-crew.png" alt="Serve one pool, spend in another" /></div><span class="tag">serve one pool · spend in another</span></figure>
+    </div>
+    <div class="cn fx-fade" data-step="4" style="left:600px;top:735px;width:520px;text-align:left;font-size:28px;">the real site, <em>running</em></div><svg class="ann draw" data-step="4" viewBox="0 0 1600 900" style="--d:0s"><path d="M590 752 Q459.4 727.0 420 600"/><path class="head" d="M417.2 614.7 L420 600 L430.7 610.6"/></svg>
+  </section>
+
+  <!-- 9 · product: app -->
+  <section class="slide" id="s9">
+    <div class="head">
+      <span class="eyebrow">THE PRODUCT · LIVE</span>
+      <h1 data-step="0" class="fx-fade" data-type="Chat, contribute, get paid."><span class="typed"></span><span class="caret"></span></h1>
+    </div>
+    <span class="num">10</span>
+    <div class="shots">
+      <figure data-step="1" class="fx-drop" style="--r:-1.5deg"><div class="card"><img src="shots/playground.png" alt="Playground with API access and x402 prices" /><div class="hl" style="left:52%;width:41%;top:43%;height:11%"></div></div><span class="tag">playground · API and x402 price per request</span></figure>
+      <figure data-step="2" class="fx-drop" style="--r:1deg"><div class="card"><img src="shots/provider.png" alt="Become a provider: create or join a pool" /></div><span class="tag">contribute · create or join a pool</span></figure>
+      <figure data-step="3" class="fx-drop" style="--r:-0.8deg"><div class="card"><img src="shots/payouts.png" alt="Payouts in USDC" /></div><span class="tag">payouts · claim USDC with a Merkle proof</span></figure>
+    </div>
+    <div class="cn fx-fade" data-step="4" style="left:600px;top:735px;width:560px;text-align:left;font-size:28px;"><em>x402</em> price per request</div><svg class="ann draw" data-step="4" viewBox="0 0 1600 900" style="--d:0s"><path d="M590 752 Q418.0 658.0 420 462"/><path class="head" d="M412.8 475.2 L420 462 L426.9 475.3"/></svg>
+  </section>
+
+  <!-- 10 · architecture (after the team's Excalidraw) -->
+  <section class="slide" id="s-arch">
+    <div class="head">
+      <span class="eyebrow">ARCHITECTURE</span>
+      <h1 data-step="0" class="fx-fade" data-type="One request, end to end."><span class="typed"></span><span class="caret"></span></h1>
+    </div>
+    <span class="num">11</span>
+    <svg class="arch-svg" viewBox="0 0 1600 900" fill="none">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1 L9 5 L0 9" fill="none" stroke="#9297a6" stroke-width="1.6"/></marker>
+        <marker id="ahm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 1 L9 5 L0 9" fill="none" stroke="#f2f3f7" stroke-width="1.6"/></marker>
+      </defs>
+      <g data-step="0" class="fx-fade"><g class="ab"><rect x="76" y="210" width="240" height="60" rx="10"/><text x="196.0" y="247" text-anchor="middle">World ID · NEAR</text></g><g class="ab"><rect x="400" y="210" width="240" height="60" rx="10"/><text x="520.0" y="247" text-anchor="middle">x402 · USDC on NEAR</text></g><g class="ab"><rect x="724" y="210" width="240" height="60" rx="10"/><text x="844.0" y="247" text-anchor="middle">OpenCode / Client</text></g><g class="ab"><rect x="76" y="335" width="240" height="60" rx="10"/><text x="196.0" y="372" text-anchor="middle">NEAR ledger contract</text></g><g class="ab"><rect x="400" y="335" width="240" height="60" rx="10"/><text x="520.0" y="372" text-anchor="middle">SQLite Ledger</text></g><g class="ab"><rect x="724" y="335" width="240" height="60" rx="10"/><text x="844.0" y="372" text-anchor="middle">API Gateway</text></g><g class="ab"><rect x="76" y="460" width="240" height="60" rx="10"/><text x="196.0" y="497" text-anchor="middle">Provider NEAR account</text></g><g class="ab"><rect x="400" y="460" width="240" height="60" rx="10"/><text x="520.0" y="497" text-anchor="middle">Payout contract</text></g><g class="ab"><rect x="724" y="460" width="240" height="60" rx="10"/><text x="844.0" y="497" text-anchor="middle">Pool Router</text></g><g class="ab"><rect x="76" y="585" width="240" height="60" rx="10"/><text x="196.0" y="622" text-anchor="middle">NEAR AI Cloud · TEE</text></g><g class="ab"><rect x="400" y="585" width="240" height="60" rx="10"/><text x="520.0" y="622" text-anchor="middle">Node Agents</text></g><g class="ab"><rect x="724" y="585" width="240" height="60" rx="10"/><text x="844.0" y="622" text-anchor="middle">Parallax Coordinator</text></g><g class="ab"><rect x="724" y="745" width="240" height="60" rx="10"/><text x="844.0" y="782" text-anchor="middle">M4 · MLX</text></g><g class="ab"><rect x="1004" y="745" width="240" height="60" rx="10"/><text x="1124.0" y="782" text-anchor="middle">M5 · MLX</text></g><g class="ab"><rect x="1284" y="745" width="240" height="60" rx="10"/><text x="1404.0" y="782" text-anchor="middle">RTX 4060 · FP8</text></g></g>
+      <g data-step="1" class="fx-fade"><g class="ab hot"><rect x="724" y="210" width="240" height="60" rx="10"/><text x="844.0" y="247" text-anchor="middle">OpenCode / Client</text></g><g class="ab hot"><rect x="724" y="335" width="240" height="60" rx="10"/><text x="844.0" y="372" text-anchor="middle">API Gateway</text></g><g class="ab hot"><rect x="724" y="460" width="240" height="60" rx="10"/><text x="844.0" y="497" text-anchor="middle">Pool Router</text></g><g class="ab hot"><rect x="724" y="585" width="240" height="60" rx="10"/><text x="844.0" y="622" text-anchor="middle">Parallax Coordinator</text></g><g class="ab hot"><rect x="724" y="745" width="240" height="60" rx="10"/><text x="844.0" y="782" text-anchor="middle">M4 · MLX</text></g><g class="ab hot"><rect x="1004" y="745" width="240" height="60" rx="10"/><text x="1124.0" y="782" text-anchor="middle">M5 · MLX</text></g><g class="ab hot"><rect x="1284" y="745" width="240" height="60" rx="10"/><text x="1404.0" y="782" text-anchor="middle">RTX 4060 · FP8</text></g></g>
+      <g data-step="1" class="draw"><path d="M874 270 V333" marker-end="url(#ahm)"/><rect class="albg" x="860.8" y="291" width="102.39999999999999" height="22" rx="4"/><text class="al main" x="912" y="306" text-anchor="middle">1 request</text><path d="M844 395 V458" marker-end="url(#ahm)"/><rect class="albg" x="802.4" y="417" width="83.2" height="22" rx="4"/><text class="al main" x="844" y="432" text-anchor="middle">2 route</text><path d="M844 520 V583" marker-end="url(#ahm)"/><rect class="albg" x="802.4" y="542" width="83.2" height="22" rx="4"/><text class="al main" x="844" y="557" text-anchor="middle">3 relay</text><path d="M844 645 V743" marker-end="url(#ahm)"/><rect class="albg" x="802.4" y="685" width="83.2" height="22" rx="4"/><text class="al main" x="844" y="700" text-anchor="middle">4 infer</text></g>
+      <g data-step="2" class="draw"><path d="M964 775 H1002" marker-end="url(#ahm)"/><path d="M1244 775 H1282" marker-end="url(#ahm)"/><path d="M1404 745 L968 398" marker-end="url(#ahm)"/><rect class="albg" x="1149.6" y="545" width="92.8" height="22" rx="4"/><text class="al main" x="1196" y="560" text-anchor="middle">5 tokens</text><path d="M790 335 V272" marker-end="url(#ahm)"/><rect class="albg" x="722.0" y="291" width="64.0" height="22" rx="4"/><text class="al main" x="754" y="306" text-anchor="middle">6 SSE</text><text class="al" x="1144" y="728" text-anchor="middle">Ethernet · sharded model</text><path id="archloop" d="M874 270 V335 M844 395 V745 M964 775 H1284 M1404 745 L968 398 M790 335 V270" fill="none" stroke="none"/><circle r="7" fill="#278cff"><animateMotion dur="5s" repeatCount="indefinite" path="M874 270 L874 335 L844 395 L844 745 L964 775 L1284 775 L1404 745 L968 398 L790 335 L790 270 Z"/></circle></g>
+      <g data-step="3" class="draw"><path d="M316 250 L722 350" marker-end="url(#ah)"/><rect class="albg" x="488.0" y="285" width="64.0" height="22" rx="4"/><text class="al" x="520" y="300" text-anchor="middle">login</text><path d="M560 270 L760 333" marker-end="url(#ah)"/><rect class="albg" x="637.6" y="286" width="44.8" height="22" rx="4"/><text class="al" x="660" y="301" text-anchor="middle">pay</text></g>
+      <g data-step="4" class="fx-fade"><path d="M722 365 H642" marker-end="url(#ah)"/><rect class="albg" x="650.0" y="355" width="64.0" height="22" rx="4"/><text class="al" x="682" y="370" text-anchor="middle">usage</text><path d="M398 365 H318" stroke-dasharray="6 6" marker-end="url(#ah)"/><rect class="albg" x="326.0" y="355" width="64.0" height="22" rx="4"/><text class="al" x="358" y="370" text-anchor="middle">audit</text><path d="M520 395 V458" stroke-dasharray="6 6" marker-end="url(#ah)"/><rect class="albg" x="488.0" y="417" width="64.0" height="22" rx="4"/><text class="al" x="520" y="432" text-anchor="middle">epoch</text><path d="M398 490 H318" marker-end="url(#ah)"/><rect class="albg" x="330.8" y="480" width="54.4" height="22" rx="4"/><text class="al" x="358" y="495" text-anchor="middle">USDC</text></g>
+      <g data-step="5" class="draw"><path d="M316 600 L722 512" marker-end="url(#ah)"/><rect class="albg" x="423.6" y="551" width="92.8" height="22" rx="4"/><text class="al" x="470" y="566" text-anchor="middle">fallback</text><path d="M560 585 L750 522" marker-end="url(#ah)"/><rect class="albg" x="598.8" y="533" width="102.39999999999999" height="22" rx="4"/><text class="al" x="650" y="548" text-anchor="middle">heartbeat</text></g>
+    </svg>
+    <div class="arch-key">
+      <span class="fx-fade" data-step="1">1–4 · request routed into the pool</span>
+      <span class="fx-fade" data-step="2">5–6 · tokens stream back</span>
+      <span class="fx-fade" data-step="3">identity + payment</span>
+      <span class="fx-fade" data-step="4">ledger → NEAR, epoch payouts in USDC</span>
+      <span class="fx-fade" data-step="5">TEE spot-checks + fallback on NEAR AI</span>
+    </div>
+    <span class="arch-credit">Diagram: Yash, RAMX team</span>
+    <div class="cn fx-fade" data-step="6" style="left:1250px;top:470px;width:300px;text-align:left;font-size:24px;">tokens stream<br><em>straight back</em></div><svg class="ann draw" data-step="6" viewBox="0 0 1600 900" style="--d:0s"><path d="M1330 545 Q1275.9 558.1 1262 612"/><path class="head" d="M1272.1 600.9 L1262 612 L1258.5 597.4"/></svg>
+  </section>
+
+  <!-- 10 · wow: private onboarding -->
+  <section class="slide" id="s10">
+    <div class="head">
+      <span class="eyebrow">TECHNICAL WOW 01 · PRIVATE ONBOARDING</span>
+      <h1 data-step="0" class="fx-fade" data-type="A private pool, from one command."><span class="typed"></span><span class="caret"></span></h1>
+    </div>
+    <span class="num">12</span>
+    <div class="steps">
+      <div class="st fx-fade" data-step="1"><i>01</i><div><b>Log in with World ID or a NEAR wallet</b><span>World ID: one human, one account. NEAR: the wallet signs a login message, no fee.</span></div></div>
+      <div class="st fx-fade" data-step="1"><i>02</i><div><b>Create a pool, or ask to join</b><span>Knowing a Pool ID is not enough: the coordinator approves every member.</span></div></div>
+      <div class="st fx-fade" data-step="2"><i>03</i><div><b>Paste one install command</b><span>A single-use pairing code that expires in 15 minutes. No session or keys inside.</span></div></div>
+      <div class="st fx-fade" data-step="2"><i>04</i><div><b>The helper makes its own node key</b><span>It signs its registration and gets a scoped credential. The server keeps only a hash.</span></div></div>
+      <div class="st fx-fade" data-step="3"><i>05</i><div><b>Models download first, everyone starts together</b><span>The gateway issues one start time. Nobody pastes timed join commands.</span></div></div>
+      <div class="st fx-fade" data-step="3"><i>06</i><div><b>Live in the directory, ready to route</b><span>Readiness needs signed heartbeats and full layer coverage.</span></div></div>
+    </div>
+    <div class="arch" data-step="4">
+      <svg class="draw in" viewBox="0 0 560 470" fill="none">
+        <path d="M280 84 V 160" stroke="#a1d6ff" stroke-width="2"/>
+        <path d="M280 244 V 320" stroke="#a1d6ff" stroke-width="2" stroke-dasharray="6 6"/>
+      </svg>
+      <div class="panel fx-fade" data-step="4" style="left:110px;top:0;width:340px"><h3>Browser</h3><p>World ID or NEAR wallet session</p></div>
+      <div class="panel fx-fade" data-step="4" style="left:60px;top:160px;width:440px;border-color:#278cff88"><h3>Central gateway</h3><p>Auth, payment, hold and settle, relay</p></div>
+      <div class="panel fx-fade" data-step="4" style="left:110px;top:320px;width:340px"><h3>Laptop helper</h3><p>Outbound HTTPS long-poll only</p></div>
+    </div>
+    <div class="secure fx-fade" data-step="5">
+      <span class="chip">no open ports</span><span class="chip">no SSH between owners</span><span class="chip">Parallax stays on 127.0.0.1</span>
+    </div>
+    <div class="cn fx-fade" data-step="6" style="left:610px;top:700px;width:330px;text-align:right;font-size:24px;"><em>no</em> inbound ports</div><svg class="ann draw" data-step="6" viewBox="0 0 1600 900" style="--d:0s"><path d="M950 718 Q995.2 659.6 1068 672"/><path class="head" d="M1056.1 662.8 L1068 672 L1053.8 676.7"/></svg>
+  </section>
+
+  <!-- 11 · wow: routing -->
+  <section class="slide" id="s11">
+    <div class="head">
+      <span class="eyebrow">TECHNICAL WOW 02 · ROUTING</span>
+      <h1 data-step="0" class="fx-fade" data-type="The best pool, for every request."><span class="typed"></span><span class="caret"></span></h1>
+    </div>
+    <span class="num">13</span>
+    <div class="formula fx-word" data-step="1"><span class="w">score</span> <span class="w">=</span> <span class="w v">reliability</span> <span class="w">×</span> <span class="w">(1 −</span> <span class="w v">load</span><span class="w">)</span></div>
+    <div class="defs">
+      <div class="panel fx-fade" data-step="2"><h3>reliability = 0.7 × success + 0.3 × uptime</h3><p>The pool is the reputation. Requests it served over 7 days, plus heartbeat slots where every layer was covered. A new pool starts at 0.8.</p></div>
+      <div class="panel fx-fade" data-step="2" style="animation-delay:.15s"><h3>load = running ÷ slots</h3><p>Pools batch requests (2 at once today), so a pool at 1 of 2 slots is 50% loaded and still a candidate.</p></div>
+    </div>
+    <div class="race" data-step="3">
+      <div class="panel">
+        <span class="k">EXAMPLE · TWO POOLS SERVE QWEN3-14B</span>
+        <div class="lane"><span>Pool A<small>0.92 × (1 − 0.5)</small></span><span class="t"><span class="f" style="width:46%;background:#606879"></span></span><span>0.46</span></div>
+        <div class="lane win"><span>Pool B<small>0.85 × (1 − 0)</small></span><span class="t"><span class="f" style="width:85%;background:#278cff"></span></span><span>0.85 ✓</span></div>
+      </div>
+    </div>
+    <div class="more fx-fade" data-step="4">
+      <span class="chip">memory pressure lowers a score, never drops the only pool</span>
+      <span class="chip">mid-stream failover continues the same answer</span>
+      <span class="chip">private pools and pinning</span>
+    </div>
+    <div class="cn fx-fade" data-step="5" style="left:1100px;top:625px;width:380px;text-align:left;font-size:24px;">higher score <em>wins</em></div><svg class="ann draw" data-step="5" viewBox="0 0 1600 900" style="--d:0s"><path d="M1090 645 Q1074.0 581.0 1010 565"/><path class="head" d="M1021.1 575.0 L1010 565 L1024.6 561.4"/></svg>
+  </section>
+
+  <!-- 12 · wow: real hardware -->
+  <section class="slide" id="s12">
+    <div class="head">
+      <span class="eyebrow">TECHNICAL WOW 03 · REAL HARDWARE</span>
+      <h1 data-step="0" class="fx-fade" data-type="Measured on real laptops."><span class="typed"></span><span class="caret"></span></h1>
+    </div>
+    <span class="num">14</span>
+    <div class="stats">
+      <div class="panel fx-drop" data-step="1" style="--r:-1.5deg"><span class="big"><s>2.7</s> → 0.32</span><h3>GiB swapped per run</h3><p>A smaller KV cache stopped macOS paging weights to disk on 16 GB Macs: 88% less swap.</p></div>
+      <div class="panel fx-drop" data-step="1" style="--r:1deg;animation-delay:.15s"><span class="big"><s>3.2</s> → 6.0</span><h3>tokens per second</h3><p>Same fix, Qwen3-14B across a MacBook Air and an RTX 4060 laptop: up to 85% faster.</p></div>
+      <div class="panel fx-drop" data-step="1" style="--r:-0.8deg;animation-delay:.3s"><span class="big">0.65 s</span><h3>to the first token</h3><p>Measured 0.65–1.2 s after the fix, with stalls down from 12 to 2 per run.</p></div>
+    </div>
+    <div class="list fx-fade" data-step="2">
+      <div>Apple MLX and NVIDIA CUDA serve one model together</div>
+      <div>Ghost-node guard: stop by process group, nothing left behind</div>
+      <div>Laptops less than 5 ms apart form pools automatically</div>
+      <div>Mid-request failover, stall detection, clean restarts</div>
+    </div>
+    <div class="cn fx-fade" data-step="3" style="left:520px;top:222px;width:400px;text-align:left;font-size:24px;"><em>88%</em> less swap</div><svg class="ann draw" data-step="3" viewBox="0 0 1600 900" style="--d:0s"><path d="M510 245 Q438.0 263.0 420 335"/><path class="head" d="M430.0 323.9 L420 335 L416.4 320.4"/></svg>
+  </section>
+
+  <!-- 13 · trust stack -->
+  <section class="slide" id="s13">
+    <div class="head">
+      <span class="eyebrow">WHY STRANGERS CAN SHARE COMPUTE</span>
+      <h1 data-step="0" class="fx-fade" data-type="Safe for strangers, by design."><span class="typed"></span><span class="caret"></span></h1>
+    </div>
+    <span class="num">15</span>
+    <div class="cols">
+      <div class="panel fx-drop" data-step="1" style="--r:-1deg"><img class="logo" src="world.svg" alt="World logo" /><h3>World</h3><p>One human, one account. Starter credits go to real people, and a banned person can't come back as someone new.</p><div class="uses"><span class="chip">IDKit</span><span class="chip">Orb or Selfie Check</span></div></div>
+      <div class="panel fx-drop" data-step="2" style="--r:0.8deg"><img class="logo" src="near.svg" alt="NEAR logo" /><h3>NEAR</h3><p>Every balance change is signed and written to a public ledger contract. Agents pay per request in USDC with x402. Providers claim USDC with a Merkle proof. Guarded agents can only pay through escrow.</p><div class="uses"><span class="chip">ledger contract</span><span class="chip">x402 · USDC</span><span class="chip">payout</span><span class="chip">escrow</span></div></div>
+      <div class="panel fx-drop" data-step="3" style="--r:-0.6deg"><img class="logo" src="near.svg" alt="NEAR logo" /><h3>NEAR AI</h3><p>A TEE model spot-checks 10% of pool answers with a fresh attestation. When no laptop pool is ready, NEAR AI Cloud serves the request, attestation on the receipt.</p><div class="uses"><span class="chip">TEE judge</span><span class="chip">attested fallback</span></div></div>
+    </div>
+  </section>
+
+  <!-- 14 · impact -->
+  <section class="slide" id="s14">
+    <div class="head">
+      <span class="eyebrow">IMPACT</span>
+      <h1 data-step="0" class="fx-fade" data-type="More AI from hardware that already exists."><span class="typed"></span><span class="caret"></span></h1>
+    </div>
+    <span class="num">16</span>
+    <div class="measured">
+      <div class="panel fx-rise" data-step="1"><span class="big">14B</span><p class="lede" style="font-size:21px">model served by a <b>16 GB Mac + an 8 GB laptop</b>. Neither can run it alone. <span class="mono" style="color:var(--faint);font-size:14px">MEASURED</span></p></div>
+      <div class="panel fx-rise" data-step="2"><span class="big">90%</span><p class="lede" style="font-size:21px">of every payment goes to <b>the people who lent the compute</b>, by the layers they served. <span class="mono" style="color:var(--faint);font-size:14px">CLAIMED IN USDC ON NEAR TESTNET</span></p></div>
+      <div class="panel fx-rise" data-step="3"><span class="big">0</span><p class="lede" style="font-size:21px"><b>new GPUs bought.</b> Every pool runs on laptops that would otherwise sit idle.</p></div>
+    </div>
+    <div class="panel est fx-slide" data-step="4" style="--r:1.2deg">
+      <span class="k">ESTIMATE · SIMPLE MATHS, NOT A MEASUREMENT</span>
+      <p class="eq">3 laptops (16 + 8 + 16 GB)</p>
+      <span class="big">= 40 GB</span>
+      <p>of pooled memory: about the memory of one 40 GB data-centre GPU, assembled from hardware people already own.</p>
+      <p class="eq">100 pools like it</p>
+      <span class="big">≈ 4 TB</span>
+      <p>of model memory without building a new data centre.</p>
+    </div>
+    <div class="cn fx-fade" data-step="5" style="left:1000px;top:790px;width:520px;text-align:left;font-size:20px;">simple maths, <em>not a measurement</em></div><svg class="ann draw" data-step="5" viewBox="0 0 1600 900" style="--d:0s"><path d="M990 805 Q996.3 771.5 965 758"/><path class="head" d="M974.4 769.7 L965 758 L980.0 756.8"/></svg>
+  </section>
+
+  <!-- 15 · close -->
+  <section class="slide" id="s15">
+    <div class="punch">
+      <h2 class="fx-word" data-step="0">
+        <span class="w">Lend</span> <span class="w">a</span> <span class="w">laptop.</span><br>
+        <span class="w blue">Use</span> <span class="w blue">the</span> <span class="w blue">whole</span> <span class="w blue">network.</span>
+      </h2>
+      <p class="sub fx-fade" data-step="1">
+        <span class="chip">World</span><span class="chip">NEAR</span><span class="chip">NEAR AI</span><br>
+        RAMX · NEAR Hackathon 2026 · <b style="color:var(--text)">github.com/yashhhhapexxxx/RAMX</b>
+      </p>
+    </div>
+  </section>
+
+  <span class="brand">RAMX · NEAR HACKATHON</span>
+  <div class="dots" id="dots"></div>
+</div>
+
+<script>
+  const stage = document.getElementById("stage");
+  const slides = [...document.querySelectorAll(".slide")];
+  const maxStep = slides.map((s) => Math.max(0, ...[...s.querySelectorAll("[data-step]")].map((e) => Number(e.dataset.step))));
+  const params = new URLSearchParams(location.search);
+  const ALL = params.has("all");
+  let cur = 0, step = 0, typer = null;
+
+  const dots = document.getElementById("dots");
+  slides.forEach(() => dots.appendChild(document.createElement("i")));
+
+  // stagger words in every word-pop line (second line starts a beat later)
+  document.querySelectorAll(".fx-word").forEach((h) => {
+    let line = 0;
+    [...h.childNodes].forEach((n) => { if (n.nodeName === "BR") line++; if (n.classList) n.dataset.line = line; });
+    h.querySelectorAll(".w").forEach((w, i) => { w.style.animationDelay = (i * 0.11 + Number(w.dataset.line || 0) * 0.3) + "s"; });
+  });
+  // stagger laptops on slide 2
+  document.querySelectorAll("#s2 .lap").forEach((l, i) => { l.style.animationDelay = (i * 0.06) + "s"; });
+
+  function fit() {
+    const s = Math.min(innerWidth / 1600, innerHeight / 900);
+    stage.style.transform = `translate(-50%, -50%) scale(${s})`;
+  }
+  addEventListener("resize", fit);
+  fit();
+
+  function type(el) {
+    const text = el.dataset.type, out = el.querySelector(".typed");
+    clearInterval(typer);
+    if (ALL) { out.textContent = text; return; }
+    out.textContent = "";
+    let i = 0;
+    typer = setInterval(() => { out.textContent = text.slice(0, ++i); if (i >= text.length) clearInterval(typer); }, 45);
+  }
+
+  function render(fresh) {
+    slides.forEach((s, i) => {
+      s.classList.toggle("on", i === cur);
+      s.classList.toggle("gone", i < cur);
+    });
+    const s = slides[cur];
+    s.querySelectorAll("[data-step]").forEach((el) => {
+      const on = Number(el.dataset.step) <= step;
+      const was = el.classList.contains("in");
+      if (on && (!was || fresh)) { el.classList.remove("in"); void el.offsetWidth; }
+      el.classList.toggle("in", on);
+      if (on && (!was || fresh) && el.dataset.type) type(el);
+    });
+    // a word-pop punchline blurs the scene behind it
+    const punch = s.querySelector(".punch [data-step]");
+    s.classList.toggle("punched", !!punch && s.querySelector(".dim-scene") && step >= Number(punch.dataset.step));
+    [...dots.children].forEach((d, i) => { d.classList.toggle("on", i <= cur); d.classList.toggle("here", i === cur); });
+    history.replaceState(null, "", `${location.search}#slide-${cur + 1}`);
+  }
+
+  function goSlide(n, atEnd) {
+    cur = Math.max(0, Math.min(slides.length - 1, n));
+    document.getElementById("progress").style.transform = `scaleX(${(cur + 1) / slides.length})`;
+    step = ALL || atEnd ? maxStep[cur] : 0;
+    render(true);
+  }
+  function next() { if (step < maxStep[cur]) { step++; render(false); } else if (cur < slides.length - 1) goSlide(cur + 1); }
+  function prev() { if (step > 0) { step--; render(false); } else if (cur > 0) goSlide(cur - 1, true); }
+
+  let typed = "";
+  addEventListener("keydown", (e) => {
+    if (["ArrowRight", " ", "PageDown", "ArrowDown"].includes(e.key)) { e.preventDefault(); next(); }
+    else if (["ArrowLeft", "PageUp", "Backspace", "ArrowUp"].includes(e.key)) { e.preventDefault(); prev(); }
+    else if (/^[0-9]$/.test(e.key)) typed += e.key;
+    else if (e.key === "Enter") { e.preventDefault(); if (typed) { goSlide(Number(typed) - 1); typed = ""; } else next(); }
+    else if (e.key === "r" || e.key === "R") goSlide(0);
+    else if (e.key === "f" || e.key === "F") { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); }
+  });
+  addEventListener("click", next);
+  addEventListener("contextmenu", (e) => { e.preventDefault(); prev(); });
+
+  const m = location.hash.match(/slide-(\d+)/);
+  goSlide(m ? Number(m[1]) - 1 : 0);
+</script>
+</body>
+</html>

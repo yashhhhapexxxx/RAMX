@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>RAMX Cover</title>
+<style>
+  @font-face { font-family: Departure; src: url("../deck/DepartureMono-Regular.woff2") format("woff2"); font-display: block; }
+  @font-face { font-family: Geist; src: url("../deck/Geist-Variable.woff2") format("woff2"); font-weight: 100 900; font-display: block; }
+  :root { --bg: #030407; --text: #f2f3f7; --soft: #b9bfcc; --faint: #606879; --blue: #278cff; --cyan: #a1d6ff; --gold: #d9a441;
+    --display: Departure, "Courier New", monospace; --body: Geist, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); }
+  .stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; color: var(--text); font-family: var(--body); isolation: isolate; }
+  .atmo { position: absolute; inset: 0; z-index: -3;
+    background: radial-gradient(ellipse at 70% 50%, #0b2a5466, transparent 50%), radial-gradient(ellipse at 92% 12%, #0d1f3d77, transparent 45%), radial-gradient(ellipse at 8% 95%, #144f9b22, transparent 55%); }
+  .grid { position: absolute; inset: 0; z-index: -2; background-image: radial-gradient(rgba(199,210,239,.09) 1px, transparent 1px); background-size: 28px 28px;
+    mask-image: radial-gradient(ellipse at 60% 50%, #000 30%, transparent 80%); }
+  .grain { position: absolute; inset: 0; z-index: 9; pointer-events: none; opacity: .06; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+  .copy { position: absolute; left: 112px; top: 300px; width: 720px; }
+  .eyebrow { display: inline-block; font: 16px var(--display); letter-spacing: 1.6px; color: #b0c1dc; border: 1px solid #4168966b; border-radius: 4px; padding: 7px 14px 7px 12px; background: #030a1480; }
+  .eyebrow::before { content: "+"; color: var(--blue); margin-right: 10px; }
+  h1 { font: 400 176px/1 var(--display); letter-spacing: -9px; margin: 34px 0 0; }
+  h1 em { font-style: normal; color: var(--blue); text-shadow: 0 0 50px #278cff66; }
+  .lede { font-size: 32px; line-height: 1.42; color: var(--soft); margin: 34px 0 0; }
+  .lede b { color: var(--text); font-weight: 600; }
+  .chips { display: flex; gap: 12px; margin-top: 44px; }
+  .chip { font: 19px var(--display); color: var(--cyan); border: 1px solid #4168966b; border-radius: 4px; padding: 5px 13px; background: #081d3a66; }
+
+  .scene { position: absolute; inset: 0; z-index: 0; }
+  svg.net { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: visible; }
+  svg.net.top { z-index: 2; }
+  .core { fill: #ffe2a8; filter: drop-shadow(0 0 14px #ffd68c) drop-shadow(0 0 30px #d9a441); }
+  .edge { fill: none; stroke: var(--blue); stroke-width: 2.4; stroke-opacity: .85; stroke-dasharray: 3 9; filter: drop-shadow(0 0 4px #278cffaa); stroke-linecap: round; }
+  .ring { fill: none; stroke: var(--cyan); stroke-opacity: .22; stroke-dasharray: 1 7; stroke-linecap: round; stroke-width: 1.5; }
+  .pkt { fill: var(--cyan); filter: drop-shadow(0 0 6px #278cff); }
+  .board { position: absolute; left: 1060px; top: 380px; width: 600px; transform: perspective(1600px) rotateX(34deg) rotateZ(-14deg); z-index: 1; }
+  .board img { display: block; width: 100%; filter: drop-shadow(0 40px 60px #01060f); }
+  .glow { position: absolute; left: 47.6%; top: 55.1%; width: 40%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle, #ffd68c99 0%, #d9a44150 28%, transparent 65%); mix-blend-mode: screen; }
+  .lap { position: absolute; z-index: 2; translate: -50% -50%; display: grid; justify-items: center; gap: 8px; color: #8fb8e6; }
+  .lap svg { width: 92px; height: 64px; filter: drop-shadow(0 0 14px #278cff44); }
+  .lap span { font: 15px var(--display); letter-spacing: .4px; color: var(--cyan); background: #030a14d9; border: 1px solid #4168966b; border-radius: 4px; padding: 3px 9px; white-space: nowrap; }
+
+  .cn { position: absolute; z-index: 3; font: 30px/1.25 var(--display); letter-spacing: -.6px; }
+  .cn em { font-style: normal; color: var(--cyan); }
+  svg.ann { position: absolute; inset: 0; width: 1920px; height: 1080px; z-index: 3; overflow: visible; }
+  .ann path { fill: none; stroke: var(--cyan); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+
+  .foot { position: absolute; left: 112px; right: 112px; bottom: 54px; display: flex; justify-content: space-between; font: 15px var(--display); letter-spacing: 1.6px; color: var(--faint); z-index: 4; }
+  .foot b { color: var(--soft); font-weight: 400; }
+  .credit { position: absolute; right: 18px; bottom: 14px; font-size: 11px; color: #3c4351; z-index: 4; }
+  .bar { position: absolute; left: 0; top: 0; height: 3px; width: 100%; background: linear-gradient(90deg, var(--blue), #278cff00); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><symbol id="laptop" viewBox="0 0 120 84"><rect x="16" y="6" width="88" height="58" rx="6" fill="none" stroke="currentColor" stroke-width="3"/><path d="M4 72h112l-6 8H10z" fill="currentColor"/></symbol></svg>
+<div class="stage">
+  <div class="atmo"></div><div class="grid"></div><div class="bar"></div>
+  <div class="scene">
+    <svg class="net" viewBox="0 0 1920 1080"><path class="ring" d="M1360 200 L1797 372"/><path class="ring" d="M1797 372 L1797 718"/><path class="ring" d="M1797 718 L1360 890"/><path class="ring" d="M1360 890 L923 718"/><path class="ring" d="M923 718 L923 372"/><path class="ring" d="M923 372 L1360 200"/></svg>
+    <div class="board"><img src="../deck/gpu-board.webp" alt="GPU board" /><span class="glow"></span></div>
+    <svg class="net top" viewBox="0 0 1920 1080"><path class="edge" d="M1360 200 Q1322 377 1354 555"/><circle class="pkt" cx="1339" cy="377" r="5"/><path class="edge" d="M1797 372 Q1557 419 1354 555"/><circle class="pkt" cx="1567" cy="442" r="5"/><path class="edge" d="M1797 718 Q1592 592 1354 555"/><circle class="pkt" cx="1584" cy="614" r="5"/><path class="edge" d="M1360 890 Q1390 722 1354 555"/><circle class="pkt" cx="1374" cy="722" r="5"/><path class="edge" d="M923 718 Q1155 679 1354 555"/><circle class="pkt" cx="1146" cy="658" r="5"/><path class="edge" d="M923 372 Q1120 507 1354 555"/><circle class="pkt" cx="1129" cy="485" r="5"/><circle class="core" cx="1354" cy="555" r="9"/></svg>
+    <div class="lap" style="left:1360px;top:200px"><svg viewBox="0 0 120 84"><use href="#laptop"/></svg><span>16 GB MacBook Air</span></div><div class="lap" style="left:1797px;top:372px"><svg viewBox="0 0 120 84"><use href="#laptop"/></svg><span>8 GB RTX 4060</span></div><div class="lap" style="left:1797px;top:718px"><svg viewBox="0 0 120 84"><use href="#laptop"/></svg><span>M2 Pro · 16 GB</span></div><div class="lap" style="left:1360px;top:890px"><svg viewBox="0 0 120 84"><use href="#laptop"/></svg><span>RTX 3060 · 12 GB</span></div><div class="lap" style="left:923px;top:718px"><svg viewBox="0 0 120 84"><use href="#laptop"/></svg><span>M1 Air · 8 GB</span></div><div class="lap" style="left:923px;top:372px"><svg viewBox="0 0 120 84"><use href="#laptop"/></svg><span>RTX 4070 · 8 GB</span></div>
+  </div>
+  <div class="copy">
+    <span class="eyebrow">NEAR HACKATHON 2026</span>
+    <h1>RAM<em>X</em></h1>
+    <p class="lede">Idle laptops, pooled into <b>one GPU</b>.<br>Run models no single machine can.</p>
+    <div class="chips"><span class="chip">World</span><span class="chip">NEAR</span><span class="chip">NEAR AI</span><span class="chip">Parallax</span></div>
+  </div>
+  <div class="cn" style="left:1580px;top:150px;width:300px">one <em>14B</em> model</div>
+  <svg class="ann" viewBox="0 0 1920 1080"><path d="M1640 200 Q1600 430 1384 532"/><path d="M1396 516 L1384 532 L1404 535"/></svg>
+  <div class="foot"><span><b>+</b> MANY SMALL GPUS. ONE MODEL.</span><span>x402 · USDC ON NEAR · MERKLE PAYOUTS</span></div>
+  <span class="credit">GPU photo: Trio3D / Wikimedia Commons, CC BY-SA 3.0 (edited)</span>
+  <div class="grain"></div>
+</div>
+</body>
+</html>
