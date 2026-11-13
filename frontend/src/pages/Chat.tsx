@@ -1,6 +1,7 @@
 /* /chat (spec §12): the playground. Logged in, a request spends credits (hold → stream →
    settle → split) and leaves a receipt on the NEAR ledger. Logged out, it shows World login and
    how an agent pays per request with x402 instead. */
+import TokMeter from "../components/chat/TokMeter";
 import { useEffect, useRef, useState } from "react";
 import type { ModelEntry, Receipt, RouteHop } from "@shared/types";
 import RouteTrace from "../components/chat/RouteTrace";
@@ -58,6 +59,12 @@ export default function Chat({ query }: { query: URLSearchParams }) {
   const [maxTokens, setMaxTokens] = useState<512 | 2048>(512);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
+  // After a message is sent the prompt box empties: shrink it back to one centred line.
+  useEffect(() => {
+    if (input) return;
+    const box = document.getElementById("chat-q") as HTMLTextAreaElement | null;
+    if (box) box.style.height = "";
+  }, [input]);
   const [streaming, setStreaming] = useState(false);
   const [route, setRoute] = useState<RouteHop[] | null>(null);
   const [active, setActive] = useState(-1);
@@ -367,16 +374,22 @@ export default function Chat({ query }: { query: URLSearchParams }) {
             void send(input);
           }}
         >
+          <TokMeter tokS={tokS} ttft={ttft} compact />
           <label htmlFor="chat-q" className="sr-only">
             Message
           </label>
           <textarea
             id="chat-q"
             className="input"
-            rows={2}
-            placeholder={chosen ? `Ask ${short(chosen)} a question…` : "No pool is serving a model right now"}
+            rows={1}
+            placeholder={chosen ? `Message ${short(chosen)}…` : "No pool is serving a model right now"}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              // Grow with the text, up to about 8 lines; one line stays vertically centred.
+              e.target.style.height = "auto";
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();

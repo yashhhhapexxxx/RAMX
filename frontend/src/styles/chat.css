@@ -304,19 +304,33 @@
 }
 .chat-input {
   display: flex;
-  gap: 10px;
-  align-items: flex-end;
+  gap: 12px;
+  align-items: center;
   padding-top: 14px;
   border-top: 1px solid var(--line);
 }
+/* One line by default, text and placeholder vertically centred; grows with the text (Chat.tsx). */
 .chat-input textarea {
   flex: 1;
-  min-height: 48px;
-  resize: vertical;
+  box-sizing: border-box;
+  height: 52px;
+  min-height: 52px;
+  max-height: 200px;
+  padding: 14px 16px;
+  resize: none;
+  overflow-y: auto;
   font: inherit;
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 22px;
+  border-radius: 12px;
 }
+.chat-input textarea::placeholder { color: var(--faint, rgba(242, 243, 247, 0.45)); opacity: 1; }
+.chat-input .button { height: 52px; padding: 0 18px; border-radius: 12px; flex: none; }
+/* Speed gauge, bottom left of the playground (restored). */
+.tok-meter-compact { flex: none; width: 88px; display: grid; justify-items: center; gap: 0; }
+.tok-meter-compact svg { width: 88px; max-width: 88px; }
+.tok-meter-compact .tok-ttft { font-size: 10.5px; color: var(--faint, rgba(242, 243, 247, 0.5)); white-space: nowrap; margin-top: -2px; }
+@media (max-width: 600px) { .tok-meter-compact { display: none; } }
 
 /* receipt sheet */
 .receipt-sheet {

@@ -1,10 +1,10 @@
 /** Throughput gauge: an arc from 0 to `max` tok/s, plus time to first token. */
-export default function TokMeter({ tokS, ttft, max = 40 }: { tokS: number | null; ttft: number | null; max?: number }) {
+export default function TokMeter({ tokS, ttft, max = 40, compact = false }: { tokS: number | null; ttft: number | null; max?: number; compact?: boolean }) {
   const r = 46;
   const L = Math.PI * r; // half circle
   const frac = Math.min(1, (tokS ?? 0) / max);
   return (
-    <div className="tok-meter">
+    <div className={`tok-meter${compact ? " tok-meter-compact" : ""}`} title={ttft != null ? `First token after ${ttft} ms` : undefined}>
       <svg viewBox="0 0 120 70" role="img" aria-label={tokS != null ? `${tokS.toFixed(1)} tokens per second` : "No request yet"}>
         <path d={`M14,62 A${r},${r} 0 0 1 106,62`} className="tok-track" />
         <path d={`M14,62 A${r},${r} 0 0 1 106,62`} className="tok-fill" strokeDasharray={`${L * frac} ${L}`} />
@@ -15,10 +15,14 @@ export default function TokMeter({ tokS, ttft, max = 40 }: { tokS: number | null
           tok/s
         </text>
       </svg>
-      <dl className="kv">
-        <dt>First token</dt>
-        <dd>{ttft != null ? `${ttft} ms` : "—"}</dd>
-      </dl>
+      {compact ? (
+        <span className="tok-ttft">{ttft != null ? `1st token ${ttft} ms` : "speed"}</span>
+      ) : (
+        <dl className="kv">
+          <dt>First token</dt>
+          <dd>{ttft != null ? `${ttft} ms` : "—"}</dd>
+        </dl>
+      )}
     </div>
   );
 }
