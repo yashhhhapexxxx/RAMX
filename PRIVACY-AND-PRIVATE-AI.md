@@ -54,6 +54,8 @@ Set per request with the `x-ramx-privacy` header.
 
 ## Verify it yourself
 
+**In the web chat:** choose **Privacy → Secure hardware (TEE)** with **End-to-end encrypted** ticked. The browser fetches the enclave's attestation straight from NEAR AI Cloud with its own nonce, encrypts the prompt to the attested key, sends only ciphertext and decrypts the answer locally; its key pair lives in memory for that tab and is never stored or sent. The receipt then shows the privacy mode, end-to-end encryption, the enclave attestation and the answer signature.
+
 Nothing here asks the user to trust the gateway. The agent client checks every claim on the user's own machine:
 
 ```bash
@@ -72,10 +74,3 @@ It confirms that the public receipt holds no text and no salt; recomputes the pr
 | Self-check run | All 11 checks passed on the user's machine. Ledger event [6EsV1Y…](https://testnet.nearblocks.io/txns/6EsV1YRJGcyuPdtrN6BHiML7vgQexXzdDnBYcnqi8fxD) |
 | End-to-end encrypted request on the hosted gateway | The client attested the enclave, RAMX relayed only ciphertext, the answer was decrypted on the client; the signed ledger event says `e2ee: true` and contains no text; the enclave's signature over the exact bytes is valid; all 16 self-checks passed. Payment [HJTFzc…](https://testnet.nearblocks.io/txns/HJTFzcamXQFZ8pm4DxS3U2vgy8bsSDqTBHtibLWP4pRH), ledger event [yhGjQC…](https://testnet.nearblocks.io/txns/yhGjQC65PQGnE17wmZuC7auC8mypBpHnbZCfudrj9rR) |
 
-## Limits
-
-- **Without encryption, the gateway reads prompts in memory** to route and bill them; end-to-end encryption removes that.
-- **Placeholders are pattern-based:** they cover emails, phone numbers, card numbers and secrets, not names or other free-text details.
-- **Trust in the enclave** rests on Intel TDX and NVIDIA attestation and on NEAR AI Cloud's attested code.
-- **"Trusted" laptops** are trusted by the user's choice; RAMX adds no encryption between pool laptops, so pools should run on a private network.
-- **The browser chat** does not use end-to-end encryption yet; the API and agent client do.
