@@ -4,6 +4,17 @@
 
 Pooling strangers' laptops is the opposite of private, and public accountability usually leaks content. RAMX treats both as design constraints. The caller decides who may see each request: their own and trusted laptops, or only a NEAR AI Cloud model inside secure hardware (a TEE), optionally **end-to-end encrypted** so that even the RAMX gateway relays nothing but ciphertext. Ordinary requests are protected too: personal data is replaced with placeholders before an untrusted laptop sees it. Meanwhile the NEAR ledger records every paid request as salted hashes only, so payments and accounting stay fully public while the text stays with its author, or inside hardware that can prove it.
 
+
+## How RAMX answers the track
+
+| The track asks for | RAMX |
+|---|---|
+| **AI that works on sensitive data without exposing it to anyone, including you** | End-to-end encryption to the enclave: the client encrypts to a key it attested itself, and the RAMX gateway relays only ciphertext |
+| **See proof the model ran in a TEE** *(from their idea)* | Every enclave answer carries a fresh-nonce Intel TDX attestation and the enclave's signature over the exact request and answer, recorded as a signed ledger event and checkable with one command |
+| **Confidential computation** | `tee` mode runs the request only inside NEAR AI Cloud secure hardware; `trusted-all` never falls back to an untrusted laptop |
+| **Private by design** | Personal data is replaced before untrusted laptops see a prompt; the public ledger holds salted hashes, never text |
+| Tags: **Private AI** · **TEE** · **NEAR AI Cloud** | All three, live on the hosted gateway |
+
 ---
 
 ## Privacy modes

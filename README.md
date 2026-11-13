@@ -79,7 +79,7 @@ Log in on the app, create a capped key on **Keys**, and export it locally:
 
 ```bash
 export RAMX_API_KEY='your-api-key'
-export RAMX_BASE_URL='https://<hosted gateway>'   # TODO: hosted URL
+export RAMX_BASE_URL='https://ramx-gateway.onrender.com'
 
 curl "$RAMX_BASE_URL/v1/chat/completions" \
   -H "Authorization: Bearer $RAMX_API_KEY" \
