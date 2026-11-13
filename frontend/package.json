@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "tsx --tsconfig tsconfig.app.json tests/data.test.mts",
+    "test": "tsx --tsconfig tsconfig.app.json tests/data.test.mts && tsx --tsconfig tsconfig.app.json tests/e2ee.test.mts",
     "test:live": "tsx --tsconfig tsconfig.app.json tests/live.test.mts"
   },
   "engines": {
@@ -19,6 +19,9 @@
     "@near-wallet-selector/meteor-wallet": "10.1.4",
     "@near-wallet-selector/modal-ui": "10.1.4",
     "@near-wallet-selector/my-near-wallet": "10.1.4",
+    "@noble/ciphers": "1.3.0",
+    "@noble/curves": "1.9.1",
+    "@noble/hashes": "1.8.0",
     "@ramx/shared": "workspace:*",
     "@worldcoin/idkit": "^4.6.0",
     "buffer": "6.0.3",

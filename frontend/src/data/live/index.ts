@@ -1,5 +1,6 @@
 /** Live gateway and NEAR RPC access. Errors never substitute fixtures. */
 import type { PriceQuote, Receipt } from "@shared/types";
+import { decryptWith, e2eeHeaders, encryptMessages } from "../../lib/e2ee";
 import { ModelsResponse, NearNonceResponse, NearTopupResponse, NearVerifyResponse, WorldVerifyResponse, NodeRegisterRequest, NodeRegisterResponse } from "@ramx/shared";
 import config from "../../../../shared/config/ramx.config.json";
 import { meFromWire, receiptFromWire, networkFromWire, ledgerFromWire, rpFromWire, payoutsFromWire, keysFromWire, newKeyFromWire, keyRequestsFromWire } from "./adapters";
@@ -57,6 +58,7 @@ function toOffer(entry: Record<string, unknown>): ModelOffer {
     pools: Number(entry.pools ?? 0),
     ...(typeof entry.context_length === "number" ? { context_length: entry.context_length } : {}),
     ...(entry.price ? { price: entry.price as PriceQuote } : {}),
+    ...(typeof entry.tee_model === "string" ? { tee_model: entry.tee_model } : {}),
     model: {
       model_id: id,
       mlx_variant: (entry.mlx_variant as string | null | undefined) ?? known?.mlx_variant ?? null,
@@ -108,10 +110,20 @@ export const liveApi: PoolApi = {
 
   async *chat(body, token, signal): AsyncIterable<ChatChunk> {
     const t0 = Date.now();
+    // End-to-end encryption: only with the enclave, and never a silent fallback to plain text.
+    const e2ee = body.e2ee ?? null;
+    if (e2ee && body.privacy !== "tee") throw new Error("End-to-end encryption needs the secure hardware (TEE) mode");
+    const messages = e2ee ? encryptMessages(body.messages, e2ee.enclave) : body.messages;
     const res = await fetch(`${base()}/v1/chat/completions`, {
       method: "POST",
-      headers: { "content-type": "application/json", ...auth(token), ...(body.pool_id ? { "x-ramx-pool": body.pool_id } : {}) },
-      body: JSON.stringify({ model: body.model, messages: body.messages, max_tokens: body.max_tokens, stream: true }),
+      headers: {
+        "content-type": "application/json",
+        ...auth(token),
+        ...(body.pool_id && !body.privacy ? { "x-ramx-pool": body.pool_id } : {}),
+        ...(body.privacy ? { "x-ramx-privacy": body.privacy } : {}),
+        ...(e2ee ? e2eeHeaders(e2ee.client, e2ee.enclave) : {}),
+      },
+      body: JSON.stringify({ model: body.model, messages, max_tokens: body.max_tokens, stream: true }),
       signal,
     });
     if (res.status === 402) throw new PaymentRequired();
@@ -140,7 +152,13 @@ export const liveApi: PoolApi = {
         const j = JSON.parse(data) as { id?: string; choices?: { delta?: { content?: string } }[] };
         receiptId ??= j.id;
         if ("error" in j) throw new Error(JSON.stringify(j.error));
-        const delta = j.choices?.[0]?.delta?.content ?? "";
+        const raw = j.choices?.[0]?.delta?.content ?? "";
+        // Each streamed chunk is encrypted on its own; decrypt it here, in the browser.
+        let delta = raw;
+        if (e2ee && raw) {
+          try { delta = decryptWith(raw, e2ee.client.secret); }
+          catch { throw new Error("Could not decrypt the enclave's answer; nothing was shown"); }
+        }
         if (first) {
           first = false;
           yield { delta: "", ttft_ms: Date.now() - t0, route: routeHeader ? JSON.parse(routeHeader) : undefined };

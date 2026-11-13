@@ -133,6 +133,16 @@ export type Receipt = {
   price_multiplier?: number | null;
   /** TEE spot-check of this answer (NEAR AI Cloud); null/absent = not sampled. */
   tee_check?: TeeCheck | null;
+  /** Privacy mode the request was served under (header x-ramx-privacy); null = normal. */
+  privacy?: "trusted-ends" | "trusted-all" | "tee" | null;
+  /** Who answered: a laptop pool, or the NEAR AI Cloud enclave. */
+  backend?: "pool" | "near-ai-cloud" | null;
+  /** The prompt and answer were end-to-end encrypted to the enclave (from the signed ledger event). */
+  e2ee?: boolean;
+  /** Attestation (fresh nonce) of the enclave model that served this request. */
+  tee_attestation?: { model: string; nonce: string; signing_address: string; attestation_sha256: string; attested_at: number } | null;
+  /** The enclave's signature over this exact request and answer, checked against an attested key. */
+  tee_signature?: { chat_id: string; signing_address: string; signed_by: "model" | "nearai_gateway"; signature_ok: boolean; hashes_match: boolean } | null;
 };
 
 export type TeeCheck = {

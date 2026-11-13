@@ -622,3 +622,10 @@
 .receipt-earned p { margin: 0; font-size: 13.5px; line-height: 1.55; }
 .receipt-tech { display: grid; gap: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
 .receipt-tech > summary { cursor: pointer; }
+
+/* Privacy switch (playground): Normal · Trusted laptops · Secure hardware (TEE) */
+.play-privacy { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; font-size: 13px; }
+.play-privacy .tabs button { display: inline-flex; align-items: center; gap: 6px; }
+.play-e2ee { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+.play-e2ee input { accent-color: #278cff; }
+.play-privacy-note { margin-top: 8px; }

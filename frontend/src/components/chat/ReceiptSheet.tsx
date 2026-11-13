@@ -127,6 +127,40 @@ export default function ReceiptSheet({ receipt, nodes, onClose }: { receipt: Rec
           </div>
         )}
 
+        {(receipt.privacy || receipt.backend === "near-ai-cloud") && (
+          <div className="receipt-tee">
+            <span className="mono-label">Privacy and secure hardware</span>
+            <dl className="kv">
+              <dt>Privacy mode</dt>
+              <dd>{receipt.privacy === "tee" ? "Secure hardware (TEE): no laptop saw the prompt" : receipt.privacy === "trusted-all" ? "Trusted laptops only" : receipt.privacy === "trusted-ends" ? "Trusted first and last layers" : "Normal"}</dd>
+              <dt>Served by</dt>
+              <dd>{receipt.backend === "near-ai-cloud" ? "NEAR AI Cloud enclave (TEE)" : "GPU Pool laptops"}</dd>
+              {receipt.e2ee && (
+                <>
+                  <dt>End-to-end encrypted</dt>
+                  <dd>Yes: encrypted in your browser to the attested enclave key; RAMX relayed only ciphertext</dd>
+                </>
+              )}
+              {receipt.tee_attestation && (
+                <>
+                  <dt>Enclave attestation</dt>
+                  <dd className="mono">{receipt.tee_attestation.model} · signer {shortHash(receipt.tee_attestation.signing_address, 10, 6)} · report {shortHash(receipt.tee_attestation.attestation_sha256, 10, 6)} (fresh nonce)</dd>
+                </>
+              )}
+              {receipt.tee_signature && (
+                <>
+                  <dt>Answer signature</dt>
+                  <dd>
+                    {receipt.tee_signature.signature_ok ? "valid: signed by an attested key" : "NOT valid"}
+                    {receipt.tee_signature.hashes_match ? ", covers this exact request and answer" : ", does not cover these exact bytes"}
+                    {" "}<span className="faint">({receipt.tee_signature.signed_by === "nearai_gateway" ? "NEAR AI gateway enclave" : "model enclave"}, {shortHash(receipt.tee_signature.signing_address, 10, 6)})</span>
+                  </dd>
+                </>
+              )}
+            </dl>
+          </div>
+        )}
+
         {receipt.tee_check && (
           <div className="receipt-tee">
             <span className="mono-label">TEE spot-check</span>

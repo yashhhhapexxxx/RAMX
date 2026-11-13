@@ -13,7 +13,8 @@ import InferenceTile from "../components/chat/InferenceTile";
 import UnavailableNotice from "../components/UnavailableNotice";
 import { ErrorBox, Busy } from "../components/console/Status";
 import { api, InsufficientCredits, PaymentRequired, SessionExpired } from "../data";
-import type { ChatBody } from "../data";
+import type { ChatBody, PrivacyMode } from "../data";
+import { attestEnclave, newClientKey, shortKey, type ClientKey, type EnclaveKey } from "../lib/e2ee";
 import { useModels, useNetwork, usePoolAvailability } from "../hooks/usePool";
 import { useSession } from "../auth/context";
 import { available, estimateTokens, holdFor } from "../lib/credits";
@@ -26,6 +27,20 @@ type Msg = { role: "user" | "assistant"; content: string };
 const SUGGESTIONS = ["How does a pool split one model across laptops?", "What does this answer cost in credits?", "How do laptop owners earn credits?"];
 const cr = (n: number) => fmtNum(n, 1);
 const short = (id: string) => id.split("/")[1] ?? id;
+
+type Privacy = "normal" | PrivacyMode;
+const PRIVACY_OPTIONS: { value: Privacy; label: string; hint: string }[] = [
+  { value: "normal", label: "Normal", hint: "Any laptop in the GPU Pool; emails, phone numbers, cards and keys are hidden from it" },
+  { value: "trusted-all", label: "Trusted laptops", hint: "Only your own or trusted laptops; if none is online, the secure enclave" },
+  { value: "tee", label: "Secure hardware (TEE)", hint: "Only a NEAR AI Cloud enclave; no laptop sees the prompt" },
+];
+/** Remembered per browser; storage can be unavailable (private mode), so every access is guarded. */
+const remembered = <T extends string>(key: string, ok: readonly T[], fallback: T): T => {
+  try { const v = localStorage.getItem(key) as T | null; return v && ok.includes(v) ? v : fallback; } catch { return fallback; }
+};
+const remember = (key: string, value: string) => { try { localStorage.setItem(key, value); } catch { /* not persisted */ } };
+/** Re-attest the enclave after this long, so the key in use is always freshly vouched for. */
+const ATTESTATION_TTL_MS = 10 * 60_000;
 
 function LoginCard({ onLogin }: { onLogin: () => void }) {
   return (
@@ -79,6 +94,17 @@ export default function Chat({ query }: { query: URLSearchParams }) {
   const [error, setError] = useState<Error | null>(null);
   const abort = useRef<AbortController | null>(null);
   const log = useRef<HTMLDivElement>(null);
+  // Privacy: the mode is the user's choice; end-to-end encryption applies to the enclave mode only.
+  const [privacy, setPrivacyState] = useState<Privacy>(() => remembered<Privacy>("ramx.privacy", ["normal", "trusted-all", "tee"], "normal"));
+  const [e2eeOn, setE2eeState] = useState<boolean>(() => remembered("ramx.e2ee", ["on", "off"], "on") === "on");
+  const setPrivacy = (p: Privacy) => { setPrivacyState(p); remember("ramx.privacy", p); };
+  const setE2ee = (on: boolean) => { setE2eeState(on); remember("ramx.e2ee", on ? "on" : "off"); };
+  /** This tab's key pair: in memory only, never stored or sent (only its public half). */
+  const clientKey = useRef<ClientKey | null>(null);
+  const enclaves = useRef(new Map<string, EnclaveKey>());
+  const [enclave, setEnclave] = useState<{ status: "attesting" | "ok" | "error"; key?: EnclaveKey; message?: string } | null>(null);
+  const privacyOn = api.mode === "live" && privacy !== "normal";
+  const encrypting = api.mode === "live" && privacy === "tee" && e2eeOn;
 
   const offers = models.data ?? [];
   const served = offers.filter((o) => o.served).map((o) => o.model);
@@ -129,7 +155,38 @@ export default function Chat({ query }: { query: URLSearchParams }) {
     setStreaming(true);
     const ctl = new AbortController();
     abort.current = ctl;
-    const body: ChatBody = { model: chosen, messages: history, max_tokens: maxTokens, pool_id: pin };
+    let e2ee: ChatBody["e2ee"];
+    if (encrypting) {
+      const teeModel = offers.find((o) => o.model.model_id === chosen)?.tee_model;
+      try {
+        if (!teeModel) throw new Error(`The gateway names no enclave model for ${short(chosen)}`);
+        let key = enclaves.current.get(teeModel);
+        if (!key || Date.now() - key.attestedAt > ATTESTATION_TTL_MS) {
+          setEnclave({ status: "attesting" });
+          key = await attestEnclave(teeModel);
+          enclaves.current.set(teeModel, key);
+        }
+        setEnclave({ status: "ok", key });
+        clientKey.current ??= newClientKey();
+        e2ee = { client: clientKey.current, enclave: key };
+      } catch (err) {
+        // Never send in plain text when encryption was asked for.
+        const message = `${(err as Error).message}. Nothing was sent; you paid nothing.`;
+        setEnclave({ status: "error", message });
+        setError(new Error(message));
+        setMsgs((m) => m.slice(0, -2));
+        setInput(content);
+        setFailed(content);
+        setStreaming(false);
+        setPhase(null);
+        return;
+      }
+    }
+    const body: ChatBody = {
+      model: chosen, messages: history, max_tokens: maxTokens,
+      ...(privacyOn ? { privacy: privacy as PrivacyMode } : { pool_id: pin }),
+      ...(e2ee ? { e2ee } : {}),
+    };
     try {
       for await (const c of api.chat(body, session.token, ctl.signal)) {
         if (c.route) {
@@ -289,7 +346,40 @@ export default function Chat({ query }: { query: URLSearchParams }) {
             </>
           )}
         </div>
-        {pin && (
+        {api.mode === "live" && (
+          <div className="play-privacy">
+            <span className="faint">Privacy</span>
+            <div className="tabs" role="radiogroup" aria-label="Privacy">
+              {PRIVACY_OPTIONS.map((o) => (
+                <button key={o.value} type="button" role="radio" aria-checked={privacy === o.value} title={o.hint}
+                  className={privacy === o.value ? "is-active" : ""} onClick={() => setPrivacy(o.value)} disabled={streaming}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            {privacy === "tee" && (
+              <label className="play-e2ee" title="Encrypt the prompt in this browser to the enclave's attested key; RAMX only relays ciphertext">
+                <input type="checkbox" checked={e2eeOn} onChange={(e) => setE2ee(e.target.checked)} disabled={streaming} /> End-to-end encrypted
+              </label>
+            )}
+          </div>
+        )}
+        {privacyOn && (
+          <p className="faint play-pin play-privacy-note" role="status">
+            {PRIVACY_OPTIONS.find((o) => o.value === privacy)?.hint}.
+            {pin && " The pool choice is not used in this mode."}
+            {encrypting && (
+              <>
+                {" "}
+                {enclave?.status === "attesting" ? <Busy size={10}>Attesting the enclave from this browser</Busy>
+                  : enclave?.status === "ok" && enclave.key ? <>Encrypted in this browser for enclave key <span className="mono">{shortKey(enclave.key.publicKeyHex)}</span>, attested ✓ (Intel TDX quote, your nonce).</>
+                  : enclave?.status === "error" ? <span className="pill pill-warn">{enclave.message}</span>
+                  : <>Your prompt is encrypted in this browser before it leaves; the enclave is attested on send.</>}
+              </>
+            )}
+          </p>
+        )}
+        {pin && !privacyOn && (
           <p className="faint play-pin" role="status">
             {pinnedAvailability.data ? <>{pinnedAvailability.data.reason} {pinnedAvailability.data.action}</> : pinnedAvailability.error ? pinnedAvailability.error.message : <Busy>Checking request availability…</Busy>}{" "}
             <button className="text-link" onClick={pinnedAvailability.reload}>Check again</button> ·{" "}
@@ -350,7 +440,16 @@ export default function Chat({ query }: { query: URLSearchParams }) {
         {lastDone && (
           <div className="play-result" role="status">
             <span>
-              Served across {receipt.route.length || route?.length || 0} {(receipt.route.length || route?.length) === 1 ? "laptop" : "laptops"} · {cr(receipt.cost)} credits charged
+              {receipt.backend === "near-ai-cloud" ? (
+                <>
+                  Served in a NEAR AI Cloud enclave (TEE)
+                  {receipt.e2ee && " · end-to-end encrypted"}
+                  {receipt.tee_signature && (receipt.tee_signature.signature_ok && receipt.tee_signature.hashes_match ? " · enclave signature ✓" : " · enclave signature not verified")}
+                </>
+              ) : (
+                <>Served across {receipt.route.length || route?.length || 0} {(receipt.route.length || route?.length) === 1 ? "laptop" : "laptops"}</>
+              )}{" "}
+              · {cr(receipt.cost)} credits charged
               {receipt.split && <> · {cr(receipt.split.nodes.reduce((sum, n) => sum + n.credits, 0))} earned by those laptops</>}
               {tokS != null && <span className="faint"> · {tokS.toFixed(1)} tok/s</span>}
               {ttft != null && <span className="faint"> · first token {ttft} ms</span>}

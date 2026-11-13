@@ -1,3 +1,4 @@
+import type { ClientKey, EnclaveKey } from "../lib/e2ee";
 import type {
   PriceQuote,
   AccountStats,
@@ -29,7 +30,14 @@ export type ChatBody = {
   max_tokens: number;
   /** Pin one pool (header x-ramx-pool, SPEC §8.8 routing preferences). Unset = the router picks. */
   pool_id?: string;
+  /** Privacy mode (header x-ramx-privacy). Unset = normal routing. */
+  privacy?: PrivacyMode;
+  /** End-to-end encryption to the attested enclave (only with privacy "tee"). */
+  e2ee?: { client: ClientKey; enclave: EnclaveKey };
 };
+
+/** "trusted-all": only the requester's own or trusted laptops, else the enclave. "tee": only the enclave. */
+export type PrivacyMode = "trusted-all" | "tee";
 
 /** World ID 4 RP context, signed by the gateway (/auth/world/rp-signature). The signing key never reaches the client. */
 export type WorldRpContext = { rp_id: string; nonce: string; created_at: number; expires_at: number; signature: string; app_id: `app_${string}`; action: string; environment: "staging" | "production" };
@@ -44,7 +52,7 @@ export type LoginResult = { token: string; me: Me; created: boolean };
 
 /** `pools` = ready pools serving the model now (from /v1/models). */
 /** `context_length` = smallest live pool context; `price` = current credit quote (floats 0.5×–2× with load). Both absent until the pools report them. */
-export type ModelOffer = { model: ModelEntry; served: boolean; pools: number; context_length?: number; price?: PriceQuote };
+export type ModelOffer = { model: ModelEntry; served: boolean; pools: number; context_length?: number; price?: PriceQuote; /** NEAR AI Cloud model that serves this id in the enclave (attest it to encrypt end to end). */ tee_model?: string };
 
 export type NetworkSnapshot = { pools: PoolListing[]; nodes: NodeListing[]; stats: AccountStats[]; updated_at: number };
 
