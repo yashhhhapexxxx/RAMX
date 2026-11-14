@@ -5,7 +5,7 @@ Connecting those machines is only half the problem: an open network also needs i
 
 **RAMX combines the RAM and GPUs of nearby Apple and NVIDIA computers into GPU Pools, and runs the marketplace on NEAR.** A **GPU Pool** is a group of nearby laptops that together serve one AI model: each machine holds only a slice of the model's layers, so the pool runs a model that none of its members could load alone. Providers contribute compute and earn USDC; people and AI agents send prompts through an OpenAI-compatible API using credits or per-request x402 payments in USDC on NEAR. Every balance change is signed and written to a NEAR contract, providers claim USDC from a Merkle payout contract, and an agent can be given a wallet that the chain itself keeps within a budget. Built for NEAR HACKATHON 2026.
 
-[Repository](https://github.com/yashhhhapexxxx/RAMX) · Website: [ramx-eight.vercel.app](https://ramx-eight.vercel.app) · Hosted gateway: [ramx-gateway.onrender.com](https://ramx-gateway.onrender.com) · Demo video: _TODO_
+[Repository](https://github.com/yashhhhapexxxx/RAMX) · Website: [ramx-eight.vercel.app](https://ramx-eight.vercel.app) · Hosted gateway: [ramx-gateway.onrender.com](https://ramx-gateway.onrender.com/v1/models) · Demo video: _TODO_
 
 ## Our approach
 UPDAT
@@ -92,6 +92,8 @@ Available models: `GET /v1/models`. For **OpenCode**, copy the configuration fro
 ### Try it: do X, see Y
 
 You need Node.js 24+, pnpm and [near-cli-rs](https://github.com/near/near-cli-rs). Testnet USDC: [faucet.circle.com](https://faucet.circle.com) (NEAR Testnet).
+
+Step 1 needs no keys. Steps 2 to 7 sign and pay with testnet accounts, so they need your own: `scripts/near-setup.sh` creates the accounts, deploys the contracts and writes the `.env` files. Without them, every result below is already on chain (see [On-chain evidence](#on-chain-evidence-near-testnet)) and shown in the demo video.
 
 ```bash
 git clone https://github.com/yashhhhapexxxx/RAMX.git && cd RAMX

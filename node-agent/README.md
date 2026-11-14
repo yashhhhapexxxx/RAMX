@@ -1,7 +1,7 @@
 # node-agent (C2, Python 3.12, uv)
 
 Node key, registration link, signed heartbeats to the gateway (which builds the directory from them),
-start/stop. Spec: `docs/SPEC.md` §4, §5.5.
+start/stop.
 
 ```bash
 cd node-agent && cp .env.example .env && uv sync
@@ -25,7 +25,7 @@ The node writes nothing on chain: the gateway builds the public directory from t
 | GPU / memory | `nvidia-smi`; macOS: `sysctl machdep.cpu.brand_string` + `hw.memsize`; else CPU + RAM. |
 | Stop | SIGTERM to the agent (`~/.ramx/agent.pid`), optional `stop-all.sh`, then one final signed heartbeat (offline). Without further heartbeats the listing expires after 120 s. |
 
-## Post-MVP P5 (docs/POST_MVP_PLAN.md, SPEC §4.3)
+## Post-MVP P5
 
 | What | How |
 |---|---|

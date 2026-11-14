@@ -1,15 +1,13 @@
 # pool (C1: Parallax pool runner)
 
 Website onboarding: `/getting-started` → Create Pool / Join Pool → World login → native local
-helper command. See [`docs/PROVIDER-ONBOARDING.md`](../docs/PROVIDER-ONBOARDING.md).
+helper command.
 `provider/helper.py` keeps marketplace credentials on the central gateway and runs locally
 in each owner's Terminal; it does not require SSH sessions between laptops.
 
-Spec: `docs/SPEC.md` §3. Known-good commands and quirks: `docs/HANDOFF.md` §2.2 and §3.1.
 Bash; works on Linux and macOS. Parallax is an installed dependency (`$PARALLAX_DIR`), never forked here.
 
-For a new group with the gateway on its coordinator, use `pool/kickstart.sh` and
-[`docs/POOL-KICKSTART.md`](../docs/POOL-KICKSTART.md). One manifest names the enrolled SSH
+For a new group with the gateway on its coordinator, use `pool/kickstart.sh`. One manifest names the enrolled SSH
 hosts; the bootstrap discovers Ethernet IPs, prepares software and model caches, prints
 owner registration links, and starts the pool together. This workflow has local tests;
 the complete four-laptop setup still needs live validation.
@@ -43,9 +41,9 @@ pool/warmup.sh
 Download the model on each node **before** joining (nodes are offline: `HF_HUB_OFFLINE=1`).
 
 Note: `/cluster/status_json` (Parallax `162354a`) lists `node_id` (libp2p peer ID), `status`, `gpu_name`,
-`gpu_memory` per node, but **no layer ranges**. See HANDOFF §9.
+`gpu_memory` per node, but **no layer ranges**.
 
-## Post-MVP P5 resilience (docs/POST_MVP_PLAN.md, SPEC §3.4)
+## Post-MVP P5 resilience
 
 | Part | Where | What |
 |---|---|---|
