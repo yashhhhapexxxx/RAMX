@@ -2,17 +2,19 @@
 /**
  * Capacity-market simulation (swarm-sim/RULES.md): BUYERS buyer agents and SELLERS seller agents,
  * each a real NEAR testnet account signing its own commit and reveal (NEP-413) with its own key,
- * bid for priority inference slots for ROUNDS rounds. Random demand and prices; no LLM calls.
+ * bid for priority inference slots for ROUNDS rounds. Each agent has a private value or cost and
+ * decides its bid with an LLM when SWARM_LLM_API_KEY is set (src/strategy.ts), else at random.
  *   pnpm --filter @ramx/swarm-sim start            (needs a running gateway; GATEWAY_URL)
  * Keys: ~/.near-credentials/testnet/<agent>.json (scripts/near-swarm-setup.sh). Nothing is spent:
  * bids are signed messages, not transactions.
  */
-import { createHash, randomBytes, randomInt } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { KeyPair, type KeyPairString } from "@near-js/crypto";
 import { canonicalJson, SwarmRoundResponse, SwarmRoundsResponse, type SwarmBid, type SwarmRole } from "@ramx/shared";
+import { decide, llmFromEnv, newProfile, type Market, type Profile } from "./strategy.ts";
 
 const env = process.env;
 const gateway = (env.GATEWAY_URL ?? "http://127.0.0.1:8080").replace(/\/+$/, "");
@@ -52,13 +54,10 @@ const agents: Agent[] = [
 ];
 const sign = (a: Agent, message: string, nonce: Buffer) => Buffer.from(a.kp.sign(nep413(message, nonce)).signature).toString("base64");
 
-/** Random strategy: buyers value a slot at 300–1500 mc, sellers' cost is 200–900 mc. */
-function bidOf(a: Agent): SwarmBid {
-  const model = MODELS[randomInt(MODELS.length)]!;
-  return a.role === "buyer"
-    ? { role: "buyer", model, units: randomInt(1, 6), price_mc: randomInt(300, 1501) }
-    : { role: "seller", model, units: randomInt(3, 11), price_mc: randomInt(200, 901) };
-}
+// Private profiles: buyers value a slot at 300–1500 mc, sellers' cost is 200–900 mc (src/strategy.ts).
+const profiles = new Map<string, Profile>(agents.map((a) => [a.id, newProfile(a.role, MODELS)]));
+const market: Market = {};
+const llm = llmFromEnv(env);
 
 /** POST, retried twice on a gateway/RPC hiccup (5xx or network); 4xx = refused, not retried. */
 async function post(path: string, body: unknown): Promise<void> {
@@ -80,12 +79,17 @@ const info = SwarmRoundsResponse.parse(await (await fetch(`${gateway}/swarm/roun
 const ms = info.round_ms;
 const commitMs = Math.floor((ms * 2) / 3);
 console.log(`${agents.length} agents (${BUYERS} buyers, ${SELLERS} sellers), ${ROUNDS} rounds of ${ms / 1000} s, models ${MODELS.join(", ")}`);
+console.log(llm ? `strategy: each agent asks ${llm.model} (${llm.baseUrl}) for its bid; random if it fails` : "strategy: random bids (set SWARM_LLM_API_KEY for LLM decisions)");
 
 const summary: { round: number; model: string; price: number; units: number; buyers: number; tx: string | null }[] = [];
 let round = Math.floor(Date.now() / ms) + 1; // start at the next round boundary
 for (let n = 0; n < ROUNDS; n++, round++) {
   await sleepUntil(round * ms + 200);
-  const plays = agents.map((a) => ({ a, bid: bidOf(a), salt: randomBytes(16).toString("hex") }));
+  const decisions = await Promise.all(agents.map((a) => decide(a.id, profiles.get(a.id)!, market, MODELS, llm)));
+  const plays = agents.map((a, i) => ({ a, bid: decisions[i]!.bid as SwarmBid, salt: randomBytes(16).toString("hex") }));
+  const byLlm = decisions.filter((d) => d.source === "llm");
+  const sample = byLlm.find((d) => d.why);
+  console.log(`\nround ${round}: strategy llm ${byLlm.length} / random ${decisions.length - byLlm.length}${sample ? `; e.g. ${sample.bid.role} ${sample.bid.units}× @ ${sample.bid.price_mc} mc: "${sample.why}"` : ""}`);
   // Commit phase: every agent signs and sends its sealed commit.
   const committed = await Promise.allSettled(plays.map(({ a, bid, salt }) => {
     const commit = commitOf(bid, salt, a.id);
@@ -112,6 +116,7 @@ for (let n = 0; n < ROUNDS; n++, round++) {
     const buyers = o.allocations.filter((x) => x.role === "buyer");
     console.log(`  ${o.model}: ${o.units} slots at ${o.price_mc} mc each; group order of ${buyers.length} buyers: ${buyers.map((b) => `${b.agent.split(".")[0]} ${b.units}×=${b.amount_mc}`).join(", ")}`);
     summary.push({ round, model: o.model, price: o.price_mc, units: o.units, buyers: buyers.length, tx: o.ledger_tx });
+    (market[o.model] ??= []).push(o.price_mc);
   }
 }
 
