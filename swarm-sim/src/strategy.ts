@@ -81,7 +81,7 @@ export async function decide(agentId: string, p: Profile, market: Market, models
     const r = await f(`${llm.baseUrl.replace(/\/+$/, "")}/chat/completions`, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${llm.apiKey}` },
-      body: JSON.stringify({ model: llm.model, messages: [{ role: "system", content: system }, { role: "user", content: user }], max_tokens: 200, temperature: 0.7 }),
+      body: JSON.stringify({ model: llm.model, messages: [{ role: "system", content: system }, { role: "user", content: user }], max_tokens: 200, temperature: 0.7, chat_template_kwargs: { enable_thinking: false } }),
       signal: AbortSignal.timeout(llm.timeoutMs),
     });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);

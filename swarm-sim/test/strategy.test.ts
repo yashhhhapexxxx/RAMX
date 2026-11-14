@@ -16,6 +16,13 @@ test("the model's bid is used when it is valid", async () => {
   assert.equal(d.why, "shade 25% below value");
 });
 
+test("thinking is turned off so the bid is not cut off by reasoning tokens", async () => {
+  let sent: any = null;
+  const f = (async (_u: string, init: RequestInit) => { sent = JSON.parse(String(init.body)); return new Response(JSON.stringify({ choices: [{ message: { content: '{"units":1,"price_mc":500}' } }] })); }) as unknown as typeof fetch;
+  await decide("buyer-1", buyer, {}, MODELS, LLM, f);
+  assert.deepEqual(sent.chat_template_kwargs, { enable_thinking: false });
+});
+
 test("a buyer never bids above its value, a seller never asks below its cost", () => {
   assert.equal(parseDecision('{"units":2,"price_mc":5000}', buyer, MODELS)!.bid.price_mc, 1000);
   assert.equal(parseDecision('{"units":2,"price_mc":10}', seller, MODELS)!.bid.price_mc, 400);
