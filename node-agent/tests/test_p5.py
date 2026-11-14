@@ -130,9 +130,11 @@ def test_tcp_rtt_to_open_and_closed_ports():
     open_port = srv.getsockname()[1]
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
-        closed_port = s.getsockname()[1]  # bound, not listening → refused (RST)
-        ms_open = system.tcp_rtt_ms("127.0.0.1", open_port)
-        ms_closed = system.tcp_rtt_ms("127.0.0.1", closed_port)
+        closed_port = s.getsockname()[1]
+    # Closed (nothing bound) → refused with RST on Linux and macOS. A bound but not listening port
+    # is refused on Linux but silently dropped on macOS, so probe after the socket is closed.
+    ms_open = system.tcp_rtt_ms("127.0.0.1", open_port)
+    ms_closed = system.tcp_rtt_ms("127.0.0.1", closed_port)
     srv.close()
     assert ms_open is not None and ms_open < 50
     assert ms_closed is not None and ms_closed < 50, "a refused connect still measures the delay"
