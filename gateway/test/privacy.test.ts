@@ -16,7 +16,7 @@ import { openDb } from "../src/db.ts";
 import { createApp } from "../src/app.ts";
 import { registerMessage } from "../src/nodes.ts";
 import { urlHash } from "../src/formation.ts";
-import { HASH_SALT_HEADER, open, promptHashOf, readTranscript, saltedHash, seal, tlsOptions } from "../src/privacy.ts";
+import { HASH_SALT_HEADER, open, promptHashOf, purgeExpiredTranscripts, readTranscript, saltedHash, seal, tlsOptions } from "../src/privacy.ts";
 import type { Directory } from "../src/router.ts";
 import { signer, testAccount, TEST_JWT_SECRET } from "./helpers.ts";
 
@@ -160,4 +160,19 @@ test("HTTPS: TLS_CERT_FILE + TLS_KEY_FILE serve the gateway over TLS; one withou
   db.close();
   assert.equal(tlsOptions(loadConfig({ POOL_COORDINATOR_URL: "http://x", DATABASE_PATH: ":memory:" })), null);
   assert.throws(() => tlsOptions(loadConfig({ POOL_COORDINATOR_URL: "http://x", DATABASE_PATH: ":memory:", TLS_CERT_FILE: cert })), /both/);
+});
+
+test("transcripts are deleted once they expire (7 days), fresh ones are kept", () => {
+  const db = openDb(":memory:");
+  const now = Date.now();
+  const ins = (id: string, expires: number) => {
+    db.prepare("INSERT INTO requests (req_id, model, pay_type, status, prompt_hash, ts) VALUES (?, ?, 'x402', 'ok', '0x00', ?)").run(id, MODEL, now);
+    db.prepare("INSERT INTO transcripts (req_id, prompt, response, expires_at) VALUES (?, 'p', 'r', ?)").run(id, expires);
+  };
+  ins("req_old", now - 1);
+  ins("req_new", now + 7 * 86_400_000);
+  assert.equal(purgeExpiredTranscripts(db, now), 1);
+  assert.equal(readTranscript(db, loadConfig({ POOL_COORDINATOR_URL: "http://x", DATABASE_PATH: ":memory:" }), "req_old"), undefined);
+  assert.ok(readTranscript(db, loadConfig({ POOL_COORDINATOR_URL: "http://x", DATABASE_PATH: ":memory:" }), "req_new"));
+  assert.equal(purgeExpiredTranscripts(db, now), 0);
 });

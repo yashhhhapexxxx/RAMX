@@ -1,6 +1,6 @@
 import { serve } from "@hono/node-server";
 import { createServer as createHttpsServer } from "node:https";
-import { tlsOptions } from "./privacy.ts";
+import { purgeExpiredTranscripts, tlsOptions } from "./privacy.ts";
 import { loadConfig, type Config } from "./config.ts";
 import { openDb } from "./db.ts";
 import { createApp } from "./app.ts";
@@ -51,13 +51,19 @@ if (e.LEDGER_CONTRACT_ID && e.NEAR_GATEWAY_ACCOUNT_ID && e.NEAR_GATEWAY_KEY) {
   console.warn("NEAR ledger not configured (LEDGER_CONTRACT_ID / NEAR_GATEWAY_ACCOUNT_ID / NEAR_GATEWAY_KEY): ledger events stay in SQLite only");
 }
 
-// Starter credit expiry (SPEC §8.2), once a minute.
+// Starter credit expiry (SPEC §8.2) and transcript deletion after 7 days, once a minute.
 const expiry = setInterval(() => {
   try {
     const n = expireStarterCredits(db, signer);
     if (n > 0) console.log(JSON.stringify({ msg: "starter_expired", accounts: n }));
   } catch (err) {
     console.error(`starter expiry failed: ${(err as Error).message}`);
+  }
+  try {
+    const t = purgeExpiredTranscripts(db);
+    if (t > 0) console.log(JSON.stringify({ msg: "transcripts_deleted", rows: t }));
+  } catch (err) {
+    console.error(`transcript purge failed: ${(err as Error).message}`);
   }
 }, 60_000);
 

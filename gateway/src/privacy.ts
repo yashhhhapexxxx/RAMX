@@ -82,6 +82,11 @@ export function readTranscript(db: Db, cfg: Config, reqId: string): { prompt: st
   return row ? { prompt: open(cfg, row.prompt)!, response: open(cfg, row.response) } : undefined;
 }
 
+/** Delete transcripts past their expiry (7 days, `transcript_retention_days`). Returns rows deleted. */
+export function purgeExpiredTranscripts(db: Db, now = Date.now()): number {
+  return db.prepare("DELETE FROM transcripts WHERE expires_at < ?").run(now).changes;
+}
+
 // ---------- HTTPS ----------
 
 /** TLS key + certificate for main.ts, or null for plain HTTP (MVP). Both keys or neither. */
