@@ -128,7 +128,7 @@
 │ untrusted laptops get placeholders, not      │
 │   emails / phones / cards / secrets          │
 │ chain stores salted hashes, never text       │
-│ transcripts encrypted, deleted after 7 days  │
+│ transcripts encrypted, deleted after 28 days │
 │ verify it yourself: agent-client private     │
 └──────────────────────────────────────────────┘
 ```

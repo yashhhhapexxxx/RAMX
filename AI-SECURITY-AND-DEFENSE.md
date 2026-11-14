@@ -25,6 +25,8 @@ The same "trust, but verify" rule runs through the rest of the system. Pools of 
 | Refused: above the per-call limit | [EKwP6t…](https://testnet.nearblocks.io/txns/EKwP6tQZLgaHQNFS9ALqJavzjpUD73t4VrZH1TAJxTFG) |
 | Allowed: guarded agent pays through the escrow and gets its answer | [9gFGWr…](https://testnet.nearblocks.io/txns/9gFGWr23xEkdqPXF97T5Y5FHNgP6caHTaqA7sEyRXaPh) |
 | TEE judge flags a laptop pool's answer: a NEAR AI Cloud model in secure hardware (fresh-nonce attestation, enclave signature checked) rated a generic "KV cache" answer `implausible`; signed `tee_check` event, ledger-v2 seq 37, schema and signature valid | [ApqcNg…](https://testnet.nearblocks.io/txns/ApqcNg5LjVMNY9KLJChtf4dmHvA4ZVex9vjLdbccjKpi) |
+| Tamper-evident accounting: every paid request is an ed25519-signed ledger event, checked against the key the contract publishes (`node gateway/src/verify-event.ts <tx>`, no keys needed) | [AwcYdv…](https://testnet.nearblocks.io/txns/AwcYdvPxQsaboi2Zkhurg41UgvnohUkZiz5vhH2kvG75), [BQWT9t…](https://testnet.nearblocks.io/txns/BQWT9tkDB7EJ1EYU7QKrQcyXfW5uwMk3KF9QjM8eih3g), [7V45St…](https://testnet.nearblocks.io/txns/7V45SttQ8oFcgdyYUzXhsAJ9NqbkDpi1FBDuBrMfewfP) |
+| Answer from secure hardware with the enclave's signature over the exact request and answer, verified and recorded (end-to-end encrypted) | [HJTFzc…](https://testnet.nearblocks.io/txns/HJTFzcamXQFZ8pm4DxS3U2vgy8bsSDqTBHtibLWP4pRH), [yhGjQC…](https://testnet.nearblocks.io/txns/yhGjQC65PQGnE17wmZuC7auC8mypBpHnbZCfudrj9rR) |
 
 ## Try it
 

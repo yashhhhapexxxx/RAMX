@@ -38,7 +38,7 @@ Set per request with the `x-ramx-privacy` header.
 | **Attested, signed answers** | Every answer from the enclave carries a fresh-nonce attestation on its receipt and the enclave's signature over the exact request and answer bytes, verified against an attested key (the model's, or NEAR AI's gateway enclave for streamed answers) and recorded as a signed ledger event. |
 | **Salted hashes on chain** | Ledger events hold `sha256(salt:prompt)` and `sha256(salt:answer)` with a fresh 16-byte salt per request, returned only to the caller. The caller can prove their receipt matches the chain; nobody can search the ledger for short, guessable prompts. |
 | **Signed privacy mode** | The mode, and `e2ee: true` for encrypted requests, is signed into the request's ledger event, so a user can prove on chain how their request was handled. |
-| **Minimal retention** | Private requests keep no transcript. Ordinary transcripts are encrypted at rest with AES-256-GCM and deleted after 7 days. Private requests are never sampled by the TEE spot-check. |
+| **Minimal retention** | Private requests keep no transcript. Ordinary transcripts are encrypted at rest with AES-256-GCM and deleted after 28 days. Private requests are never sampled by the TEE spot-check. |
 
 ## Who sees your prompt
 
@@ -49,7 +49,7 @@ Set per request with the `x-ramx-privacy` header.
 | **Middle layer laptops** (intermediate numbers, not text) | Any pool member | Any pool member | Only you or trusted accounts | No laptop | No laptop |
 | **NEAR AI Cloud enclave (TEE)** | Only when no pool is ready | Only when no trusted pool is ready | Only when no trusted pool is ready | Always, attested | Always; the only place the text is decrypted |
 | **TEE spot-check** (10% of pool answers) | May be sampled | Never | Never | Never | Never |
-| **Stored transcript** | Encrypted, deleted after 7 days | None | None | None | None |
+| **Stored transcript** | Encrypted, deleted after 28 days | None | None | None | None |
 | **Public receipt and NEAR ledger** | Salted hashes, payer, model, cost | + signed mode | + signed mode | + signed mode, enclave answer signature | + signed `e2ee: true` |
 
 ## Verify it yourself
