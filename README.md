@@ -4,7 +4,7 @@
 
 RAMX turns the idle memory of everyday Apple and NVIDIA laptops into one shared AI cloud. Nearby machines form a **GPU Pool**, each holds a slice of a model's layers, and together they serve a model **none of them could load alone**. People and AI agents use it through an OpenAI-compatible API, paying with credits or per request in USDC with x402. **NEAR runs the economy:** every balance change is a signed event on a ledger contract, providers claim their USDC from a Merkle payout contract, and an agent's wallet can be held to a budget by a contract it cannot override. Built for NEAR HACKATHON 2026.
 
-[Repository](https://github.com/yashhhhapexxxx/RAMX) · Website: [ramx-eight.vercel.app](https://ramx-eight.vercel.app) · Hosted gateway: [ramx-gateway.onrender.com](https://ramx-gateway.onrender.com/v1/models) · Demo video: _TODO_
+[Repository](https://github.com/yashhhhapexxxx/RAMX) · Website: [ramx-eight.vercel.app](https://ramx-eight.vercel.app) · Hosted gateway: [ramx-gateway.onrender.com](https://ramx-gateway.onrender.com/v1/models) · Demo video: [x.com/gpuxram](https://x.com/gpuxram/status/2121716405552959688)
 
 ## At a glance
 
