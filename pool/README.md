@@ -18,7 +18,7 @@ the complete four-laptop setup still needs live validation.
 | `join-node.sh [env]` | `parallax join` (default env `pool/node.env`, `ROLE=node`). Sets `HF_HUB_OFFLINE=1`; `CUDA_HOME` + `PATH` on CUDA nodes; `$EXTRA_FLAGS` (Mac memory flags). |
 | `stop-all.sh` | TERM → KILL each recorded process group, then sweeps every `parallax/.venv/bin/(python\|vllm-rs)` process (`spawn_main`, `resource_tracker`, ghosts). Fails if `pgrep -f "parallax/.venv/bin/python"` is not empty. |
 | `status.sh` | `GET http://127.0.0.1:3001/cluster/status_json` (override `PARALLAX_API`). |
-| `warmup.sh` | One warm-up request (SPEC §3.2 step 5): no logprobs, `enable_thinking: false`. |
+| `warmup.sh` | One warm-up request: no logprobs, `enable_thinking: false`. |
 
 Every start uses `-u`, `--dht-prefix`, fixed `--tcp-port/--udp-port`, and
 `--announce-maddrs /ip4/$LAN_IP/tcp/$TCP_PORT /ip4/$LAN_IP/udp/$UDP_PORT/quic-v1`.
@@ -28,7 +28,7 @@ Logs: `pool/logs/<name>.log`. Process group IDs: `pool/run/<name>.pgid` (both gi
 
 `DRY_RUN=1 <script>` prints the command and changes nothing.
 
-## Start procedure (SPEC §3.2)
+## Start procedure
 
 ```bash
 pool/stop-all.sh                      # on every machine
@@ -62,7 +62,7 @@ Hook tests (no Parallax needed): `python3 -m pytest pool/hooks`. Pin check again
 Not verified on the live pool yet: run the start procedure once with hooks on and check the log lines
 `ramx hooks: patched ...` in `pool/logs/scheduler.log` and `node.log`.
 
-## SPEC §16.1 pools (SPEC §3.5)
+## Automatic pools
 
 | Part | Where | What |
 |---|---|---|
