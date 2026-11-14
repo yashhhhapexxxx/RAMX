@@ -162,7 +162,7 @@ test("HTTPS: TLS_CERT_FILE + TLS_KEY_FILE serve the gateway over TLS; one withou
   assert.throws(() => tlsOptions(loadConfig({ POOL_COORDINATOR_URL: "http://x", DATABASE_PATH: ":memory:", TLS_CERT_FILE: cert })), /both/);
 });
 
-test("transcripts are deleted once they expire (7 days), fresh ones are kept", () => {
+test("transcripts are deleted once they expire (28 days), fresh ones are kept", () => {
   const db = openDb(":memory:");
   const now = Date.now();
   const ins = (id: string, expires: number) => {
@@ -170,7 +170,7 @@ test("transcripts are deleted once they expire (7 days), fresh ones are kept", (
     db.prepare("INSERT INTO transcripts (req_id, prompt, response, expires_at) VALUES (?, 'p', 'r', ?)").run(id, expires);
   };
   ins("req_old", now - 1);
-  ins("req_new", now + 7 * 86_400_000);
+  ins("req_new", now + 28 * 86_400_000);
   assert.equal(purgeExpiredTranscripts(db, now), 1);
   assert.equal(readTranscript(db, loadConfig({ POOL_COORDINATOR_URL: "http://x", DATABASE_PATH: ":memory:" }), "req_old"), undefined);
   assert.ok(readTranscript(db, loadConfig({ POOL_COORDINATOR_URL: "http://x", DATABASE_PATH: ":memory:" }), "req_new"));

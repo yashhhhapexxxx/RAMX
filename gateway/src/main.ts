@@ -51,7 +51,7 @@ if (e.LEDGER_CONTRACT_ID && e.NEAR_GATEWAY_ACCOUNT_ID && e.NEAR_GATEWAY_KEY) {
   console.warn("NEAR ledger not configured (LEDGER_CONTRACT_ID / NEAR_GATEWAY_ACCOUNT_ID / NEAR_GATEWAY_KEY): ledger events stay in SQLite only");
 }
 
-// Starter credit expiry (SPEC §8.2) and transcript deletion after 7 days, once a minute.
+// Starter credit expiry (SPEC §8.2) and transcript deletion after 28 days, once a minute.
 const expiry = setInterval(() => {
   try {
     const n = expireStarterCredits(db, signer);

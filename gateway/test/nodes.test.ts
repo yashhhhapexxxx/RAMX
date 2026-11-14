@@ -184,7 +184,7 @@ test("credits end to end: hold → settle → split to node owners by layers (se
   assert.deepEqual({ ...rel }, { requests_routed: 1, requests_ok: 1 });
   const tr = db.prepare("SELECT prompt, response, expires_at FROM transcripts WHERE req_id = ?").get(receipt.req_id) as { prompt: string; response: string; expires_at: number };
   assert.equal(tr.response, "Hi there. ".repeat(30));
-  assert.ok(tr.expires_at > Date.now() + 6 * 86_400_000);
+  assert.ok(tr.expires_at > Date.now() + 27 * 86_400_000);
 
   // Failed request: hold released, cost 0, reliability penalty, no settle event.
   fakeFail = true;
