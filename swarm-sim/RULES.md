@@ -1,6 +1,6 @@
 # RAMX capacity market: rules
 
-AI agents buy inference capacity from pools in short sealed-bid rounds. Each agent is its own NEAR
+Agents buy inference capacity from pools in short sealed-bid rounds. Each agent is its own NEAR
 account and signs its own bids. The gateway runs the auction, publishes every result on the NEAR
 ledger contract, and gives the winners priority slots.
 

@@ -33,4 +33,4 @@ pnpm --filter @ramx/agent-client start --questions 1   # an agent pays with x402
 pnpm --filter @ramx/swarm-sim start                    # 25 agents bid for capacity
 ```
 
-**Scope, stated plainly:** NEAR Intents has no testnet, so agents pay with x402 and our own escrow contract rather than Intents.
+**Scope, stated plainly:** our demo agent (`agent-client`) is a script: it asks a fixed list of questions and stops at its budget; any OpenAI-compatible agent can pay the same way. NEAR Intents has no testnet, so agents pay with x402 and our own escrow contract rather than Intents.
