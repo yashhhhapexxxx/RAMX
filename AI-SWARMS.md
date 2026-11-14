@@ -20,7 +20,8 @@ What makes it a swarm rather than one bot is that no agent trusts the coordinato
 
 | What | Transaction |
 |---|---|
-| A capacity-market round cleared and recorded | [GfbcX7…](https://testnet.nearblocks.io/txns/GfbcX7ofwgcJHVG2Q2meXCjpEGdXn3zZ1dypo2QP88jz) |
+| A capacity-market round cleared and recorded (random bids) | [GfbcX7…](https://testnet.nearblocks.io/txns/GfbcX7ofwgcJHVG2Q2meXCjpEGdXn3zZ1dypo2QP88jz) |
+| Two rounds where **all 25 agents chose their bids with an LLM** (NEAR AI Cloud, 25 of 25 each round); signed `swarm_cleared` events, ledger-v3 seq 39–42, schema and signature valid | [3R9Xui…](https://testnet.nearblocks.io/txns/3R9XuivrPFPEXTYoh8gSsEqU6J7aurQBB83o5gUN9ucQ), [z4HWQ8…](https://testnet.nearblocks.io/txns/z4HWQ8pKxZBQskzxjZTCrZqBVD4XK4C9pUVAAvMst97) |
 
 ## Try it
 
@@ -28,6 +29,7 @@ What makes it a swarm rather than one bot is that no agent trusts the coordinato
 pnpm --filter @ramx/swarm-sim start    # 25 agents sign and bid for 10 rounds; watch /swarm in the app
 SWARM_LLM_API_KEY=<NEAR AI Cloud key> pnpm --filter @ramx/swarm-sim start   # each agent asks the LLM for its bid
 ```
+
 Rules: [swarm-sim/RULES.md](swarm-sim/RULES.md).
 
-**Scope, stated plainly:** each agent decides its bid with an LLM when `SWARM_LLM_API_KEY` is set (default NEAR AI Cloud), within a private value or cost it cannot exceed; without a key it bids at random within the same limits. The recorded round above used random bids. Every agent signs its own commit and reveal with its own key. In the simulation, buyers' allocations are recorded as obligations (`payment: "due"`). Settling them in USDC through the escrow contract, so a swarm of guarded agents trades within on-chain limits, is next; NEAR Intents settlement waits for an Intents testnet.
+**Scope, stated plainly:** each agent decides its bid with an LLM when `SWARM_LLM_API_KEY` is set (default NEAR AI Cloud), within a private value or cost it cannot exceed; without a key it bids at random within the same limits. The first recorded round used random bids; the two later rounds were decided by the LLM (25 of 25 agents each round), for example a buyer: "Bidding near my max valuation to secure preferred model given recent clearing price of 843 mc." Every agent signs its own commit and reveal with its own key. In the simulation, buyers' allocations are recorded as obligations (`payment: "due"`). Settling them in USDC through the escrow contract, so a swarm of guarded agents trades within on-chain limits, is next; NEAR Intents settlement waits for an Intents testnet.

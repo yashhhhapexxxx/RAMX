@@ -24,6 +24,7 @@ The same "trust, but verify" rule runs through the rest of the system. Pools of 
 | Refused: payee not on the allow list | [J4YypM…](https://testnet.nearblocks.io/txns/J4YypMMUmYSDv87xA4bAjUTTUELAaFofrzy5zS7J3hja) |
 | Refused: above the per-call limit | [EKwP6t…](https://testnet.nearblocks.io/txns/EKwP6tQZLgaHQNFS9ALqJavzjpUD73t4VrZH1TAJxTFG) |
 | Allowed: guarded agent pays through the escrow and gets its answer | [9gFGWr…](https://testnet.nearblocks.io/txns/9gFGWr23xEkdqPXF97T5Y5FHNgP6caHTaqA7sEyRXaPh) |
+| TEE judge flags a laptop pool's answer: a NEAR AI Cloud model in secure hardware (fresh-nonce attestation, enclave signature checked) rated a generic "KV cache" answer `implausible`; signed `tee_check` event, ledger-v2 seq 37, schema and signature valid | [ApqcNg…](https://testnet.nearblocks.io/txns/ApqcNg5LjVMNY9KLJChtf4dmHvA4ZVex9vjLdbccjKpi) |
 
 ## Try it
 

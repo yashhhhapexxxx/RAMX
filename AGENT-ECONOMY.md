@@ -24,6 +24,7 @@ An agent economy also needs limits and price discovery. Owners choose how much f
 | Agent pays per request with x402 | [G3rzbD…](https://testnet.nearblocks.io/txns/G3rzbD1y6sEfAfJA79tH8aQmBYsj3jYDEEM5XphzNJY4), [2v7At7…](https://testnet.nearblocks.io/txns/2v7At7Ez6x31TtsaZyntsBSPrwnuBVmoygSDPXgMgdth) |
 | Agent pays, answer served by a laptop pool | [Gpxq3h…](https://testnet.nearblocks.io/txns/Gpxq3hxD4JVWvgmAS2Ps6Y4j4DG2CyQWoSssWYvzk1j3) |
 | Guarded agent pays through the escrow | [9gFGWr…](https://testnet.nearblocks.io/txns/9gFGWr23xEkdqPXF97T5Y5FHNgP6caHTaqA7sEyRXaPh) |
+| Goal mode: the LLM chose each purchase, paid for each with x402, and stopped on its own after 3 steps (0.01 USDC of a 0.05 budget) | [Dj2U2e…](https://testnet.nearblocks.io/txns/Dj2U2ey6YSgEzJBKjLAPWhemBfsN282XDNRTGztVGTRu), [AfvqBG…](https://testnet.nearblocks.io/txns/AfvqBG7QwXQRdsQnMnHidiwK7jcPwLnvt2TT4Z9RZoyi), [XLnLG1…](https://testnet.nearblocks.io/txns/XLnLG1HEtgUN1X5TiXjogxQ3FDw7HHX2tZpLEe7U5M1) |
 | The provider claims what agents paid | [B8ZaniL…](https://testnet.nearblocks.io/txns/B8ZaniLqcTAva9EoWiLuDZv1iqvfSi1dQVsxPhQhGPqK) |
 
 ## Try it
@@ -34,4 +35,4 @@ pnpm --filter @ramx/agent-client start --goal "Can three 16 GB laptops run a 14B
 pnpm --filter @ramx/swarm-sim start                    # 25 agents bid for capacity
 ```
 
-**Scope, stated plainly:** `agent-client` has two modes. By default it asks a fixed list of questions (the recorded runs above). With `--goal`, before each purchase it asks the model, in a paid request, what to buy next or whether it is done, sees what it already bought and its budget, and stops on its own. Any OpenAI-compatible agent can pay the same way. NEAR Intents has no testnet, so agents pay with x402 and our own escrow contract rather than Intents.
+**Scope, stated plainly:** `agent-client` has two modes. By default it asks a fixed list of questions (the earlier recorded runs). The goal-mode run above was decided by the model. With `--goal`, before each purchase it asks the model, in a paid request, what to buy next or whether it is done, sees what it already bought and its budget, and stops on its own. Any OpenAI-compatible agent can pay the same way. NEAR Intents has no testnet, so agents pay with x402 and our own escrow contract rather than Intents.
