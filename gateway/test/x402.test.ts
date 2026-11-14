@@ -186,3 +186,15 @@ test("API key top-up through the real x402 server: 402 asks exactly usdc × 1e6 
   assert.equal(requirementsOf(await send(app, { model: MODEL, messages: [{ role: "user", content: "hi" }], max_tokens: 100 })).accepts[0].amount, "4000");
   db.close();
 });
+
+test("behind a TLS proxy, the 402 resource URL is the PUBLIC_URL the client uses", async () => {
+  const cfg = loadConfig({ POOL_COORDINATOR_URL: `http://127.0.0.1:${(pool.address() as AddressInfo).port}`, DATABASE_PATH: ":memory:", JWT_SECRET: TEST_JWT_SECRET });
+  const db = openDb(":memory:");
+  const x402 = createX402({ cfg: cfg.net, facilitator: httpFacilitator(facUrl), payTo: "treasury.ramx.testnet", publicUrl: "https://gw.example.org" });
+  const app = createApp({ cfg, db, signer, directory: testDirectory(cfg, db), x402, onComplete: () => {} });
+  const r = await send(app, { model: MODEL, messages: [{ role: "user", content: "hi" }] });
+  assert.equal(r.status, 402);
+  const reqs = requirementsOf(r);
+  assert.equal(reqs.resource.url, "https://gw.example.org/v1/chat/completions");
+  assert.doesNotMatch(reqs.resource.description, /SPEC/);
+});

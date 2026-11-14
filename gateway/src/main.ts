@@ -40,7 +40,7 @@ const db = openDb(e.DATABASE_PATH, { resetOnMismatch: e.DB_RESET_ON_MISMATCH ===
 const facilitator = e.X402_RELAYER_ID && e.X402_RELAYER_KEY
   ? localNearFacilitator({ network: cfg.net.x402_near.network, relayerId: e.X402_RELAYER_ID, relayerKey: e.X402_RELAYER_KEY, rpcUrl: e.NEAR_RPC_URL })
   : e.X402_FACILITATOR_URL ? httpFacilitator(e.X402_FACILITATOR_URL) : null;
-const x402 = facilitator && e.X402_PAY_TO ? createX402({ cfg: cfg.net, facilitator, payTo: e.X402_PAY_TO }) : null;
+const x402 = facilitator && e.X402_PAY_TO ? createX402({ cfg: cfg.net, facilitator, payTo: e.X402_PAY_TO, publicUrl: e.PUBLIC_URL }) : null;
 if (!x402) console.warn("x402 not configured (X402_PAY_TO + X402_RELAYER_ID/X402_RELAYER_KEY or X402_FACILITATOR_URL): requests without a session get 402");
 
 // NEAR ledger writer: async, never blocks a request (CLAUDE.md §4.9). Without the gateway NEAR account, events stay unsent in SQLite.

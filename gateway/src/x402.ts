@@ -62,12 +62,17 @@ export const httpFacilitator = (url: string): FacilitatorClient => new HTTPFacil
 /** Body for the price callback. The handler has already parsed and checked the request. */
 type Priced = { model: string; maxTokens: number } | { units: string };
 
-function adapter(c: Context, priced: Priced): HTTPAdapter {
+/** Behind a TLS proxy (Render) the request arrives as http://; PUBLIC_URL gives the URL clients really use. */
+function adapter(c: Context, priced: Priced, publicUrl?: string): HTTPAdapter {
   return {
     getHeader: (n) => c.req.header(n),
     getMethod: () => c.req.method,
     getPath: () => c.req.path,
-    getUrl: () => c.req.url,
+    getUrl: () => {
+      if (!publicUrl) return c.req.url;
+      const u = new URL(c.req.url);
+      return new URL(u.pathname + u.search, publicUrl).toString();
+    },
     getAcceptHeader: () => c.req.header("accept") ?? "",
     getUserAgent: () => c.req.header("user-agent") ?? "",
     getBody: () => priced,
@@ -84,7 +89,7 @@ const toResponse = (r: HTTPResponseInstructions): Response => {
   return new Response(JSON.stringify(r.body ?? {}), { status: r.status, headers });
 };
 
-export function createX402(opts: { cfg: RamxConfig; facilitator: FacilitatorClient; payTo: string }): X402 {
+export function createX402(opts: { cfg: RamxConfig; facilitator: FacilitatorClient; payTo: string; publicUrl?: string }): X402 {
   if (!NearAccountId.safeParse(opts.payTo).success) throw new Error("X402_PAY_TO must be a NEAR account ID (e.g. treasury.ramx.testnet)");
   const { network, asset } = opts.cfg.x402_near;
   const server = new x402ResourceServer(opts.facilitator).register("near:*", new ExactNearScheme());
@@ -101,7 +106,7 @@ export function createX402(opts: { cfg: RamxConfig; facilitator: FacilitatorClie
         },
         maxTimeoutSeconds: 120,
       }],
-      description: "RAMX chat completion (priced by model and max_tokens tier, SPEC §7.3)",
+      description: "RAMX chat completion (priced by model and max_tokens tier)",
       mimeType: "application/json",
     },
     [X402_TOPUP_ROUTE]: {
@@ -136,7 +141,7 @@ export function createX402(opts: { cfg: RamxConfig; facilitator: FacilitatorClie
       return Response.json({ error: { code: "internal", message: `x402 facilitator unreachable: ${(e as Error).message}` } }, { status: 502 });
     }
     const ctx: HTTPRequestContext = {
-      adapter: adapter(c, priced),
+      adapter: adapter(c, priced, opts.publicUrl),
       path: c.req.path,
       method: c.req.method,
       paymentHeader: c.req.header("payment-signature") ?? c.req.header("x-payment"),
