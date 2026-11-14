@@ -38,7 +38,7 @@ The node writes nothing on chain: the gateway builds the public directory from t
 
 Tests: `uv run pytest -q` (17 tests; `tests/test_p5.py` covers the parts above).
 
-## SPEC §16.1 (automatic pools)
+## Automatic pools
 
 | What | How |
 |---|---|
