@@ -10,6 +10,8 @@ import type { FinalExecutionOutcome } from "@near-js/types";
  */
 
 export const NEAR_TESTNET_RPC = "https://rpc.testnet.fastnear.com";
+/** Keeps every transaction. The default RPC drops ones older than about two days, so old receipts need this. */
+export const NEAR_TESTNET_ARCHIVAL_RPC = "https://archival-rpc.testnet.fastnear.com";
 /** 1 TGas = 10^12 gas. A plain function call fits in 30 TGas; batches and cross-contract calls use more. */
 export const TGAS = 1_000_000_000_000n;
 

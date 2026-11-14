@@ -3,14 +3,15 @@
  * Check ledger events on NEAR (anyone can run this; no secrets needed):
  *   node src/verify-event.ts <tx_hash> [gateway_pubkey_hex]
  *   node --env-file=.env src/verify-event.ts --pubkey      prints the public key of GATEWAY_SIGNING_KEY
- * Env: LEDGER_CONTRACT_ID (default ledger-v2.ramx.testnet), NEAR_RPC_URL (default testnet RPC).
+ * Env: LEDGER_CONTRACT_ID (default ledger-v2.ramx.testnet), NEAR_RPC_URL (default: the archival testnet RPC,
+ * so transactions older than a few days are still found).
  * Reads the transaction, takes every `ramx`/`ledger` NEP-297 event it emitted, and checks each
  * event's schema and its ed25519 signature against the key the contract publishes (or the one given).
  * Exit 1 if any event is invalid.
  */
 import { LedgerEvent } from "@ramx/shared";
 import { signerFromSeed, verifyEvent } from "./events.ts";
-import { nearProvider, nep297Events } from "./near.ts";
+import { NEAR_TESTNET_ARCHIVAL_RPC, nearProvider, nep297Events } from "./near.ts";
 
 const [arg, pubArg] = process.argv.slice(2);
 if (arg === "--pubkey") {
@@ -23,7 +24,7 @@ if (!arg || !/^[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(arg)) {
   process.exit(1);
 }
 const contract = process.env.LEDGER_CONTRACT_ID ?? "ledger-v2.ramx.testnet";
-const provider = nearProvider(process.env.NEAR_RPC_URL);
+const provider = nearProvider(process.env.NEAR_RPC_URL ?? NEAR_TESTNET_ARCHIVAL_RPC);
 const writer = String(await provider.callFunction(contract, "writer", {}));
 const pub = pubArg ?? String(await provider.callFunction(contract, "pubkey", {}));
 const outcome = await provider.viewTransactionStatus(arg, writer, "FINAL");
