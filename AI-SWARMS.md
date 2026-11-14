@@ -26,7 +26,8 @@ What makes it a swarm rather than one bot is that no agent trusts the coordinato
 
 ```bash
 pnpm --filter @ramx/swarm-sim start    # 25 agents sign and bid for 10 rounds; watch /swarm in the app
+SWARM_LLM_API_KEY=<NEAR AI Cloud key> pnpm --filter @ramx/swarm-sim start   # each agent asks the LLM for its bid
 ```
 Rules: [swarm-sim/RULES.md](swarm-sim/RULES.md).
 
-**Scope, stated plainly:** in the simulator the agents are scripted: each picks its demand and price at random within fixed ranges (no LLM), then signs its own commit and reveal with its own key. In the simulation, buyers' allocations are recorded as obligations (`payment: "due"`). Settling them in USDC through the escrow contract, so a swarm of guarded agents trades within on-chain limits, is next; NEAR Intents settlement waits for an Intents testnet.
+**Scope, stated plainly:** each agent decides its bid with an LLM when `SWARM_LLM_API_KEY` is set (default NEAR AI Cloud), within a private value or cost it cannot exceed; without a key it bids at random within the same limits. The recorded round above used random bids. Every agent signs its own commit and reveal with its own key. In the simulation, buyers' allocations are recorded as obligations (`payment: "due"`). Settling them in USDC through the escrow contract, so a swarm of guarded agents trades within on-chain limits, is next; NEAR Intents settlement waits for an Intents testnet.

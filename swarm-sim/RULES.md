@@ -57,6 +57,9 @@ this demo (NEAR Intents has no testnet).
 
 ## What the simulation shows
 
-`swarm-sim` runs 20 buyers and 5 sellers with random demand and prices (no LLM calls) for 10
-rounds against a running gateway: each agent signs its own commit and reveal, and the page `/swarm`
+`swarm-sim` runs 20 buyers and 5 sellers for 10 rounds against a running gateway. Each agent has a private
+value (buyer) or cost (seller) and a number of slots. With `SWARM_LLM_API_KEY` set, every agent asks an LLM
+(default NEAR AI Cloud) for its bid each round, given its limit and the recent clearing prices, and the bid is
+clamped so a buyer never pays above its value and a seller never sells below its cost; without a key, or if
+the call fails, it bids at random within the same limits (`src/strategy.ts`): each agent signs its own commit and reveal, and the page `/swarm`
 shows the group orders, clearing prices, each buyer's share and the ledger transactions.

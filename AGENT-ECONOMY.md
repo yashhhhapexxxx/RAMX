@@ -30,7 +30,8 @@ An agent economy also needs limits and price discovery. Owners choose how much f
 
 ```bash
 pnpm --filter @ramx/agent-client start --questions 1   # an agent pays with x402 and gets an answer
+pnpm --filter @ramx/agent-client start --goal "Can three 16 GB laptops run a 14B model?"   # the model decides each purchase
 pnpm --filter @ramx/swarm-sim start                    # 25 agents bid for capacity
 ```
 
-**Scope, stated plainly:** our demo agent (`agent-client`) is a script: it asks a fixed list of questions and stops at its budget; any OpenAI-compatible agent can pay the same way. NEAR Intents has no testnet, so agents pay with x402 and our own escrow contract rather than Intents.
+**Scope, stated plainly:** `agent-client` has two modes. By default it asks a fixed list of questions (the recorded runs above). With `--goal`, before each purchase it asks the model, in a paid request, what to buy next or whether it is done, sees what it already bought and its budget, and stops on its own. Any OpenAI-compatible agent can pay the same way. NEAR Intents has no testnet, so agents pay with x402 and our own escrow contract rather than Intents.
