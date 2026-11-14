@@ -21,7 +21,7 @@ What makes it a swarm rather than one bot is that no agent trusts the coordinato
 | What | Transaction |
 |---|---|
 | A capacity-market round cleared and recorded (random bids) | [GfbcX7…](https://testnet.nearblocks.io/txns/GfbcX7ofwgcJHVG2Q2meXCjpEGdXn3zZ1dypo2QP88jz) |
-| Two rounds where **all 25 agents chose their bids with an LLM** (NEAR AI Cloud, 25 of 25 each round); signed `swarm_cleared` events, ledger-v3 seq 39–42, schema and signature valid | [3R9Xui…](https://testnet.nearblocks.io/txns/3R9XuivrPFPEXTYoh8gSsEqU6J7aurQBB83o5gUN9ucQ), [z4HWQ8…](https://testnet.nearblocks.io/txns/z4HWQ8pKxZBQskzxjZTCrZqBVD4XK4C9pUVAAvMst97) |
+| Two rounds where **all 25 agents chose their bids with an LLM** (NEAR AI Cloud, 25 of 25 each round, as printed by the run); signed `swarm_cleared` events with the cleared prices and allocation hashes, ledger-v3 seq 39–42, schema and signature valid | [3R9Xui…](https://testnet.nearblocks.io/txns/3R9XuivrPFPEXTYoh8gSsEqU6J7aurQBB83o5gUN9ucQ), [z4HWQ8…](https://testnet.nearblocks.io/txns/z4HWQ8pKxZBQskzxjZTCrZqBVD4XK4C9pUVAAvMst97) |
 
 ## Try it
 
